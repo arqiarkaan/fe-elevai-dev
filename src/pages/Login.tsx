@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,28 +7,106 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Mail, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/lib/auth';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, loading: authLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const toastShownRef = useRef(false);
+
+  // Show success message if redirected from password update
+  useEffect(() => {
+    if (location.state?.passwordUpdated && !toastShownRef.current) {
+      toastShownRef.current = true;
+      toast.success(
+        'Password berhasil diperbarui! Silakan login dengan password baru Anda.',
+        {
+          duration: 5000,
+        }
+      );
+      // Clear the state to prevent showing message on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate login
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        // Translate common Supabase errors to Indonesian
+        let errorMessage = error.message;
+
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage =
+            'Email atau password yang Anda masukkan salah. Silakan coba lagi.';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage =
+            'Email Anda belum diverifikasi. Silakan cek inbox untuk konfirmasi email.';
+        } else if (error.message.includes('Invalid email')) {
+          errorMessage = 'Format email tidak valid. Mohon periksa kembali.';
+        } else if (error.message.includes('User not found')) {
+          errorMessage =
+            'Akun dengan email ini tidak ditemukan. Silakan daftar terlebih dahulu.';
+        } else if (error.message.includes('too many requests')) {
+          errorMessage =
+            'Terlalu banyak percobaan login. Mohon tunggu beberapa saat.';
+        }
+
+        toast.error(errorMessage);
+        return;
+      }
+
+      if (data.session) {
+        toast.success('Login berhasil!');
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat login. Silakan coba lagi.');
+      console.error('Login error:', error);
+    } finally {
       setIsLoading(false);
-      toast.success('Login berhasil!');
-      navigate('/dashboard');
-    }, 1000);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    toast.info('Google login akan segera tersedia');
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message);
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat login dengan Google');
+      console.error('Google login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

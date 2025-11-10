@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -7,29 +7,103 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, User, Mail, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/lib/auth';
 
 const Signup = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
+  const { user, loading: authLoading } = useAuthStore();
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate signup
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+          emailRedirectTo: undefined, // Disable email link, use OTP instead
+        },
+      });
+
+      if (error) {
+        // Translate common Supabase errors to Indonesian
+        let errorMessage = error.message;
+
+        if (error.message.includes('User already registered')) {
+          errorMessage =
+            'Email ini sudah terdaftar. Silakan login atau gunakan email lain.';
+        } else if (error.message.includes('Password should be at least')) {
+          errorMessage = 'Password minimal harus 6 karakter.';
+        } else if (error.message.includes('Invalid email')) {
+          errorMessage = 'Format email tidak valid. Mohon periksa kembali.';
+        } else if (error.message.includes('Signup requires a valid password')) {
+          errorMessage =
+            'Password tidak valid. Mohon masukkan password yang sesuai.';
+        }
+
+        toast.error(errorMessage);
+        return;
+      }
+
+      if (data.user) {
+        // Check if email confirmation is required
+        if (data.user.identities && data.user.identities.length === 0) {
+          toast.error(
+            'Email ini sudah terdaftar. Silakan login dengan akun Anda.'
+          );
+          return;
+        }
+
+        // Always redirect to verify email page with OTP
+        toast.success('Kode OTP telah dikirim ke email Anda!', {
+          duration: 3000,
+        });
+        navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat mendaftar. Silakan coba lagi.');
+      console.error('Signup error:', error);
+    } finally {
       setIsLoading(false);
-      toast.success('Akun berhasil dibuat!');
-      navigate('/dashboard');
-    }, 1000);
+    }
   };
 
-  const handleGoogleSignup = () => {
-    toast.info('Google signup akan segera tersedia');
+  const handleGoogleSignup = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message);
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat signup dengan Google');
+      console.error('Google signup error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -94,14 +168,14 @@ const Signup = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.4, delay: 0.3 }}
               >
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="fullName">Nama Lengkap</Label>
                 <div className="relative">
                   <Input
-                    id="username"
+                    id="fullName"
                     type="text"
-                    placeholder="johndoe"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
                     className="pr-10"
                     required
                   />

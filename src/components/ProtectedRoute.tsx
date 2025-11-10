@@ -2,14 +2,25 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Sparkles, ArrowRight } from 'lucide-react';
+import { useAuthStore } from '@/lib/auth';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
+  const { user, loading } = useAuthStore();
 
-  // TODO: Replace with actual auth state
-  const isLoggedIn = false;
+  // Show nothing while checking auth status
+  if (loading) {
+    return (
+      <div className="min-h-screen gradient-hero flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (isLoggedIn) {
+  if (user) {
     return <>{children}</>;
   }
 

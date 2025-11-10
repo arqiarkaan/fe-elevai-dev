@@ -7,10 +7,10 @@ import {
   DollarSign,
   Users,
 } from 'lucide-react';
+import { useAuthStore } from '@/lib/auth';
 
 export const Navbar = () => {
-  // TODO: Replace with actual auth state
-  const isLoggedIn = false;
+  const { user } = useAuthStore();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
@@ -48,7 +48,7 @@ export const Navbar = () => {
           </div>
 
           {/* Login/Dashboard Button */}
-          {isLoggedIn ? (
+          {user ? (
             <Link to="/dashboard">
               <Button variant="premium" size="sm">
                 <LayoutDashboard className="w-4 h-4" />

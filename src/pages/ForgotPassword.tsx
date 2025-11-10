@@ -1,30 +1,101 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, Mail, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/lib/auth';
 
 const ForgotPassword = () => {
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (countdown > 0) {
+      toast.info(`Mohon tunggu ${countdown} detik sebelum mengirim ulang.`);
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error('Format email tidak valid. Mohon periksa kembali.');
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulate sending reset email
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Send reset password email directly
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`,
+      });
+
+      if (error) {
+        // Translate errors to Indonesian
+        let errorMessage = error.message;
+
+        if (error.message.includes('Invalid email')) {
+          errorMessage = 'Format email tidak valid. Mohon periksa kembali.';
+        } else if (
+          error.message.includes('Email rate limit exceeded') ||
+          error.message.includes('security purposes') ||
+          error.message.includes('can only request this after')
+        ) {
+          errorMessage =
+            'Anda baru saja mengirim permintaan. Mohon tunggu beberapa saat sebelum mencoba lagi.';
+        } else if (error.message.includes('too many requests')) {
+          errorMessage =
+            'Terlalu banyak permintaan. Mohon tunggu beberapa saat.';
+        }
+
+        toast.error(errorMessage);
+        return;
+      }
+
+      // Success - set email sent state and start countdown
+      // Note: Supabase will send email even if user doesn't exist (for security reasons)
+      // This prevents email enumeration attacks
+      setEmailSent(true);
+      setCountdown(60); // 60 seconds cooldown
+
       toast.success(
-        'Link reset password telah dikirim! Silakan cek email Anda (termasuk folder spam) untuk melanjutkan proses reset password.',
+        'Link reset password telah dikirim! Silakan cek email Anda (termasuk folder spam).',
         { duration: 5000 }
       );
-      setEmail('');
-    }, 1000);
+    } catch (error) {
+      toast.error(
+        'Terjadi kesalahan saat mengirim link reset password. Silakan coba lagi.'
+      );
+      console.error('Reset password error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -115,11 +186,64 @@ const ForgotPassword = () => {
                   type="submit"
                   variant="premium"
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isLoading || countdown > 0}
                 >
-                  {isLoading ? 'Mengirim...' : 'Kirim Link Reset'}
+                  {isLoading ? (
+                    <>
+                      <Mail className="w-4 h-4 mr-2 animate-pulse" />
+                      Mengirim...
+                    </>
+                  ) : emailSent ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Kirim Ulang Link Reset
+                    </>
+                  ) : (
+                    'Kirim Link Reset'
+                  )}
                 </Button>
               </motion.div>
+
+              {/* Success Message */}
+              {emailSent && countdown === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg"
+                >
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-semibold text-green-500 mb-1">
+                        Email Terkirim!
+                      </p>
+                      <p className="text-muted-foreground">
+                        Silakan cek inbox atau folder spam Anda. Jika belum
+                        menerima, Anda bisa mengirim ulang.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Countdown Info */}
+              {countdown > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg"
+                >
+                  <div className="text-sm text-center text-muted-foreground">
+                    <p>
+                      Mohon tunggu{' '}
+                      <span className="font-bold text-primary">
+                        {countdown}
+                      </span>{' '}
+                      detik sebelum mengirim ulang email.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
             </form>
 
             <motion.p

@@ -44,6 +44,7 @@ import { VeoPromptingFeature } from '@/features/veo-prompting/VeoPromptingFeatur
 import { PromptEnhancerFeature } from '@/features/prompt-enhancer/PromptEnhancerFeature';
 import { InstagramBioFeature } from '@/features/instagram-bio/InstagramBioFeature';
 import { LinkedInOptimizerFeature } from '@/features/linkedin-optimizer/LinkedInOptimizerFeature';
+import { useAuthStore } from '@/lib/auth';
 
 type Category = 'student' | 'lomba' | 'branding' | 'tools' | 'reviewer';
 
@@ -61,19 +62,32 @@ const categories = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuthStore();
   const [activeCategory, setActiveCategory] = useState<Category>('student');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const isPremium = false; // This would come from auth context
 
-  // TODO: Replace with actual user data from your auth solution
-  const username = 'User';
+  // Get user's first name from metadata, fallback to email
+  const getFirstName = () => {
+    const fullName = user?.user_metadata?.full_name;
+    if (fullName) {
+      return fullName.split(' ')[0]; // Take only first word
+    }
+    return user?.email?.split('@')[0] || 'User';
+  };
+  const username = getFirstName();
 
   const handleLogout = async () => {
-    // TODO: Implement logout logic with your auth solution
-    toast.success('Berhasil logout');
-    navigate('/');
+    try {
+      await signOut();
+      toast.success('Berhasil logout');
+      navigate('/');
+    } catch (error) {
+      toast.error('Gagal logout');
+      console.error('Logout error:', error);
+    }
   };
 
   const confirmLogout = () => {
