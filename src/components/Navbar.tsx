@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { SignedIn, SignedOut } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import {
   Sparkles,
@@ -10,6 +9,9 @@ import {
 } from 'lucide-react';
 
 export const Navbar = () => {
+  // TODO: Replace with actual auth state
+  const isLoggedIn = false;
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
       <div className="container mx-auto px-4">
@@ -46,22 +48,21 @@ export const Navbar = () => {
           </div>
 
           {/* Login/Dashboard Button */}
-          <SignedIn>
+          {isLoggedIn ? (
             <Link to="/dashboard">
               <Button variant="premium" size="sm">
                 <LayoutDashboard className="w-4 h-4" />
                 Dashboard
               </Button>
             </Link>
-          </SignedIn>
-          <SignedOut>
+          ) : (
             <Link to="/login">
               <Button variant="outline" size="sm">
                 <Sparkles className="w-4 h-4" />
                 Login
               </Button>
             </Link>
-          </SignedOut>
+          )}
         </div>
       </div>
     </nav>

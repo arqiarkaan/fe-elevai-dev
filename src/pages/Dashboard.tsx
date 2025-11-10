@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useClerk, useUser } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -62,18 +61,17 @@ const categories = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { signOut } = useClerk();
-  const { user } = useUser();
   const [activeCategory, setActiveCategory] = useState<Category>('student');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const isPremium = false; // This would come from auth context
 
-  const username = user?.username || user?.firstName || '';
+  // TODO: Replace with actual user data from your auth solution
+  const username = 'User';
 
   const handleLogout = async () => {
-    await signOut();
+    // TODO: Implement logout logic with your auth solution
     toast.success('Berhasil logout');
     navigate('/');
   };
