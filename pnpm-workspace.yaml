@@ -1,0 +1,6 @@
+ignoredBuiltDependencies:
+  - '@clerk/shared'
+
+onlyBuiltDependencies:
+  - '@swc/core'
+  - esbuild
