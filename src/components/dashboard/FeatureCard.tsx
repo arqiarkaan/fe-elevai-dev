@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, Lock } from 'lucide-react';
 
 interface FeatureCardProps {
   icon: LucideIcon;
@@ -19,24 +19,20 @@ export const FeatureCard = ({
   isUserPremium,
   onClick,
 }: FeatureCardProps) => {
-  // Allow all features to be clickable for now
-  const isDisabled = false;
+  // Disable premium features for non-premium users
+  const isDisabled = isPremium && !isUserPremium;
 
   return (
     <Card
-      className={`p-6 gradient-card border-border/50 transition-smooth group cursor-pointer ${
-        isDisabled
-          ? 'opacity-50 cursor-not-allowed hover:border-border/50'
-          : 'hover:border-primary/50 hover:shadow-glow'
+      className={`p-6 gradient-card border-border/50 transition-smooth group relative cursor-pointer hover:border-primary/50 hover:shadow-glow min-h-[200px] flex flex-col ${
+        isDisabled ? 'opacity-60' : ''
       }`}
-      onClick={!isDisabled ? onClick : undefined}
+      onClick={onClick}
     >
       <div className="flex items-start justify-between mb-4">
         <Icon
-          className={`w-10 h-10 ${
-            isDisabled
-              ? 'text-muted-foreground'
-              : 'text-primary group-hover:scale-110 transition-smooth'
+          className={`w-12 h-12 text-primary transition-smooth ${
+            !isDisabled && 'group-hover:scale-110'
           }`}
         />
         {isPremium ? (
@@ -55,8 +51,19 @@ export const FeatureCard = ({
           </Badge>
         )}
       </div>
-      <h3 className="text-lg font-bold mb-2">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
+      
+      <div className="flex-1 pb-8">
+        <h3 className="text-xl font-bold mb-3">{title}</h3>
+        <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+      </div>
+      
+      {/* Premium label at bottom for locked features */}
+      {isDisabled && (
+        <div className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground px-4 py-2 flex items-center justify-center gap-2 rounded-b-lg">
+          <Lock className="w-4 h-4" />
+          <span className="text-sm font-semibold">Khusus Premium</span>
+        </div>
+      )}
     </Card>
   );
 };

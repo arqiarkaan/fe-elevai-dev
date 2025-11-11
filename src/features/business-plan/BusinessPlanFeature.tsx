@@ -4,21 +4,94 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import { Briefcase, Sparkles } from "lucide-react";
+import { Briefcase } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { asistenLombaApi } from "@/lib/api";
+import { toast } from "sonner";
+import { useUserStore } from "@/lib/user-store";
+import { GeneratedResultCard, LoadingStateCard } from "@/components/GeneratedResultCard";
 
 const switchOptions = [
-  "Ringkasan Eksekutif",
-  "Analisis Pasar",
-  "Strategi Pemasaran",
-  "Keuangan",
-  "Analisis SWOT"
+  { key: "ringkasanEksekutif", label: "Ringkasan Eksekutif" },
+  { key: "analisisPasar", label: "Analisis Pasar" },
+  { key: "strategiPemasaran", label: "Strategi Pemasaran" },
+  { key: "keuangan", label: "Keuangan" },
+  { key: "analisisSWOT", label: "Analisis SWOT" }
 ];
 
 export const BusinessPlanFeature = () => {
   const [ideBisnis, setIdeBisnis] = useState("");
   const [switches, setSwitches] = useState<Record<string, boolean>>({});
+  const [result, setResult] = useState<string | null>(null);
+  const { refreshProfile } = useUserStore();
 
   const isValid = ideBisnis.trim() !== "";
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      return await asistenLombaApi.businessPlan({
+        deskripsiBisnis: ideBisnis,
+        ringkasanEksekutif: switches.ringkasanEksekutif,
+        analisisPasar: switches.analisisPasar,
+        strategiPemasaran: switches.strategiPemasaran,
+        keuangan: switches.keuangan,
+        analisisSWOT: switches.analisisSWOT,
+      });
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        // Handle different response formats
+        let resultText = '';
+        
+        if (typeof data.data === 'string') {
+          resultText = data.data;
+        } else if (data.data.result) {
+          resultText = data.data.result;
+        } else if (data.data.plan) {
+          resultText = data.data.plan;
+        } else if (data.data.business_plan) {
+          resultText = data.data.business_plan;
+        } else if (data.data.business_plan_outline) {
+          resultText = data.data.business_plan_outline;
+        } else {
+          // If no recognized field, show error message
+          console.error('Unexpected response format:', data.data);
+          toast.error('Format response tidak dikenali. Silakan coba lagi.');
+          return;
+        }
+        
+        setResult(resultText);
+        refreshProfile();
+      }
+    },
+    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+      console.error("Business Plan Generator error:", error);
+      if (error.error === "Insufficient tokens") {
+        toast.error(
+          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
+        );
+      } else {
+        toast.error(error.error || "Terjadi kesalahan saat generate business plan");
+      }
+    },
+  });
+
+  const handleCopy = () => {
+    if (result) {
+      navigator.clipboard.writeText(result);
+      toast.success("Hasil berhasil disalin!");
+    }
+  };
+
+  const handleRegenerate = () => {
+    generateMutation.mutate();
+  };
+
+  const handleReset = () => {
+    setResult(null);
+    setIdeBisnis("");
+    setSwitches({});
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -42,12 +115,12 @@ export const BusinessPlanFeature = () => {
 
       <Card className="p-4 space-y-3 bg-card/50 border-border/50">
         {switchOptions.map((option) => (
-          <div key={option} className="flex items-center justify-between">
-            <Label htmlFor={option} className="cursor-pointer">{option}</Label>
+          <div key={option.key} className="flex items-center justify-between">
+            <Label htmlFor={option.key} className="cursor-pointer">{option.label}</Label>
             <Switch 
-              id={option}
-              checked={switches[option] || false}
-              onCheckedChange={(checked) => setSwitches({...switches, [option]: checked})}
+              id={option.key}
+              checked={switches[option.key] || false}
+              onCheckedChange={(checked) => setSwitches({...switches, [option.key]: checked})}
             />
           </div>
         ))}
@@ -56,11 +129,27 @@ export const BusinessPlanFeature = () => {
       <Button 
         className="w-full" 
         size="lg"
-        disabled={!isValid}
+        disabled={!isValid || generateMutation.isPending}
+        onClick={() => generateMutation.mutate()}
       >
-        <Sparkles className="w-4 h-4" />
+        <Briefcase className="w-4 h-4" />
         Generate Business Plan
       </Button>
+
+      {generateMutation.isPending && (
+        <LoadingStateCard message="ElevAI sedang menggenerate business plan..." />
+      )}
+
+      {result && !generateMutation.isPending && (
+        <GeneratedResultCard
+          result={result}
+          onCopy={handleCopy}
+          onRegenerate={handleRegenerate}
+          onReset={handleReset}
+          isRegenerating={generateMutation.isPending}
+          requiredTokens={1}
+        />
+      )}
     </div>
   );
 };

@@ -3,6 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { useMutation } from '@tanstack/react-query';
+import { personalBrandingApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { useUserStore } from '@/lib/user-store';
 import {
   Loader2,
   Linkedin,
@@ -13,7 +17,6 @@ import {
   ArrowLeft,
   ArrowRight,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -32,7 +35,8 @@ interface FormData {
 
 export const LinkedInOptimizerFeature = () => {
   const [step, setStep] = useState<Step>(1);
-  const [loading, setLoading] = useState(false);
+  const { refreshProfile } = useUserStore();
+  const [generatedResult, setGeneratedResult] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     targetOptimasi: '',
     namaLengkap: '',
@@ -107,11 +111,7 @@ export const LinkedInOptimizerFeature = () => {
     }
 
     if (step === 4) {
-      setLoading(true);
-      setTimeout(() => {
-        setLoading(false);
-        setStep(5);
-      }, 2000);
+      generateMutation.mutate();
       return;
     }
 
@@ -140,6 +140,42 @@ export const LinkedInOptimizerFeature = () => {
   const isStep4Valid =
     formData.pencapaian.some((p) => p.trim() !== '') &&
     formData.skills.some((s) => s.trim() !== '');
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      return await personalBrandingApi.linkedinOptimizer({
+        targetOptimasi: formData.targetOptimasi,
+        namaLengkap: formData.namaLengkap,
+        jurusan: formData.jurusan,
+        semester: parseInt(formData.semester),
+        targetKarir: formData.targetKarir === 'sesuai' ? 'sesuai_jurusan' : 'eksplorasi',
+        tujuanUtama: formData.tujuanUtama === 'karir' ? 'mencari_karir' : 'personal_branding',
+        targetRole: formData.targetRole,
+        identitasProfesional: formData.identitasProfesional,
+        pencapaian: formData.pencapaian.filter(p => p.trim() !== ''),
+        skills: formData.skills.filter(s => s.trim() !== ''),
+      });
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setGeneratedResult(data.data.result);
+        setStep(5);
+        refreshProfile();
+      }
+    },
+    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+      console.error('LinkedIn Optimizer error:', error);
+      if (error.error === 'Insufficient tokens') {
+        toast.error(
+          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
+        );
+      } else if (error.error === 'Premium subscription required') {
+        toast.error('Fitur ini memerlukan langganan premium');
+      } else {
+        toast.error(error.error || 'Terjadi kesalahan saat generate');
+      }
+    },
+  });
 
   const handleBack = () => {
     setStep((prev) => (prev - 1) as Step);
@@ -184,9 +220,10 @@ export const LinkedInOptimizerFeature = () => {
     </div>
   );
 
-  const generatedResults = {
-    headline: `${formData.namaLengkap} | ${formData.identitasProfesional} | ${formData.targetRole} Enthusiast | ${formData.jurusan}`,
-    summary: `Saya ${formData.namaLengkap}, mahasiswa ${
+  const displayResult = generatedResult || (
+    formData.targetOptimasi === 'headline'
+      ? `${formData.namaLengkap} | ${formData.identitasProfesional} | ${formData.targetRole} Enthusiast | ${formData.jurusan}`
+      : `Saya ${formData.namaLengkap}, mahasiswa ${
       formData.jurusan
     } semester ${formData.semester} yang passionate di bidang ${
       formData.targetRole
@@ -218,8 +255,8 @@ Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan p
 #${formData.targetRole.replace(/\s+/g, '')} #${formData.jurusan.replace(
       /\s+/g,
       ''
-    )} #ProfessionalDevelopment`,
-  };
+    )} #ProfessionalDevelopment`
+  );
 
   if (step === 5) {
     return (
@@ -251,13 +288,7 @@ Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan p
           <Button
             variant="outline"
             size="icon"
-            onClick={() =>
-              handleCopy(
-                formData.targetOptimasi === 'headline'
-                  ? generatedResults.headline
-                  : generatedResults.summary
-              )
-            }
+            onClick={() => handleCopy(displayResult)}
             className="absolute top-4 right-4"
           >
             <Copy className="w-4 h-4" />
@@ -271,11 +302,11 @@ Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan p
             <div className="prose prose-sm max-w-none">
               {formData.targetOptimasi === 'headline' ? (
                 <p className="text-lg font-medium">
-                  {generatedResults.headline}
+                  {displayResult}
                 </p>
               ) : (
                 <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed">
-                  {generatedResults.summary}
+                  {displayResult}
                 </pre>
               )}
             </div>
@@ -688,11 +719,11 @@ Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan p
               </Button>
               <Button
                 onClick={handleNext}
-                disabled={loading || !isStep4Valid}
+                disabled={generateMutation.isPending || !isStep4Valid}
                 className="flex-1"
                 size="lg"
               >
-                {loading ? (
+                {generateMutation.isPending ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Generating...

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +46,9 @@ import { PromptEnhancerFeature } from '@/features/prompt-enhancer/PromptEnhancer
 import { InstagramBioFeature } from '@/features/instagram-bio/InstagramBioFeature';
 import { LinkedInOptimizerFeature } from '@/features/linkedin-optimizer/LinkedInOptimizerFeature';
 import { useAuthStore } from '@/lib/auth';
+import { useUserStore, subscribeToProfileChanges } from '@/lib/user-store';
+import { PremiumModal } from '@/components/payment/PremiumModal';
+import { TokenModal } from '@/components/payment/TokenModal';
 
 type Category = 'student' | 'lomba' | 'branding' | 'tools' | 'reviewer';
 
@@ -63,11 +67,29 @@ const categories = [
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuthStore();
+  const { profile, fetchProfile } = useUserStore();
   const [activeCategory, setActiveCategory] = useState<Category>('student');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  const isPremium = false; // This would come from auth context
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  
+  // Fetch user profile on mount
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfile(user.id);
+      // Subscribe to real-time profile changes
+      const unsubscribe = subscribeToProfileChanges(user.id);
+      return unsubscribe;
+    }
+  }, [user?.id, fetchProfile]);
+  
+  // Check if user is premium and not expired
+  const isPremium = profile?.is_premium && 
+    (!profile.premium_expires_at || new Date(profile.premium_expires_at) > new Date());
+  
+  const userTokens = profile?.tokens || 0;
 
   // Get user's first name from metadata, fallback to email
   const getFirstName = () => {
@@ -95,7 +117,12 @@ const Dashboard = () => {
   };
 
   const handleFeatureClick = (featureId: string, isPremiumFeature: boolean) => {
-    // Allow access to all features for now
+    // Check if premium feature and user is not premium
+    if (isPremiumFeature && !isPremium) {
+      toast.error('Fitur ini khusus pengguna premium. Silahkan Upgrade!');
+      setShowPremiumModal(true);
+      return;
+    }
     setSelectedFeature(featureId);
   };
 
@@ -168,19 +195,38 @@ const Dashboard = () => {
 
               {/* Desktop Navigation */}
               <div className="hidden lg:flex items-center gap-3">
-                <Button variant="premium" size="sm">
-                  <Crown className="w-4 h-4" />
-                  Jadi Premium
-                </Button>
-                <Button variant="token" size="sm">
+                {!isPremium && (
+                  <Button variant="premium" size="sm" onClick={() => setShowPremiumModal(true)}>
+                    <Crown className="w-4 h-4" />
+                    Jadi Premium
+                  </Button>
+                )}
+                <Button variant="token" size="sm" onClick={() => setShowTokenModal(true)}>
                   <Coins className="w-4 h-4" />
                   Beli Token
                 </Button>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border/50">
+                <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-card border border-border/50">
                   <span className="text-sm font-medium">{username}</span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                    Basic
+                  <span className={`text-xs px-2 py-0.5 rounded ${
+                    isPremium 
+                      ? 'bg-primary/10 text-primary font-semibold' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {isPremium ? 'Premium' : 'Basic'}
                   </span>
+                  <Tooltip delayDuration={100}>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-help">
+                        <Coins className="w-4 h-4 text-amber-500" />
+                        <span className="text-sm font-semibold text-amber-500">
+                          {userTokens}
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Token yang anda miliki</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
                 <Button variant="ghost" size="icon" onClick={confirmLogout}>
                   <LogOut className="w-4 h-4" />
@@ -197,24 +243,40 @@ const Dashboard = () => {
                   </SheetTrigger>
                   <SheetContent side="right" className="w-[280px]">
                     <div className="flex flex-col gap-4 mt-8">
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border/50">
-                        <span className="text-sm font-medium">{username}</span>
-                        <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                          Basic
-                        </span>
+                      <div className="flex flex-col gap-4 px-4 py-4 rounded-lg bg-card border border-border/50">
+                        <div className="flex flex-col items-center gap-2 text-center">
+                          <span className="text-lg font-bold">{username}</span>
+                          <span className={`text-sm px-3 py-1 rounded-full ${
+                            isPremium 
+                              ? 'bg-primary/10 text-primary font-semibold' 
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {isPremium ? '👑 Premium' : 'Basic'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/10">
+                          <Coins className="w-5 h-5 text-amber-500" />
+                          <span className="text-base font-bold text-amber-500">
+                            {userTokens} Token
+                          </span>
+                        </div>
                       </div>
-                      <Button
-                        variant="premium"
-                        size="sm"
-                        className="w-full justify-start"
-                      >
-                        <Crown className="w-4 h-4" />
-                        Jadi Premium
-                      </Button>
+                      {!isPremium && (
+                        <Button
+                          variant="premium"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => setShowPremiumModal(true)}
+                        >
+                          <Crown className="w-4 h-4" />
+                          Jadi Premium
+                        </Button>
+                      )}
                       <Button
                         variant="token"
                         size="sm"
                         className="w-full justify-start"
+                        onClick={() => setShowTokenModal(true)}
                       >
                         <Coins className="w-4 h-4" />
                         Beli Token
@@ -284,19 +346,38 @@ const Dashboard = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-3">
-              <Button variant="premium" size="sm">
-                <Crown className="w-4 h-4" />
-                Jadi Premium
-              </Button>
-              <Button variant="token" size="sm">
+              {!isPremium && (
+                <Button variant="premium" size="sm" onClick={() => setShowPremiumModal(true)}>
+                  <Crown className="w-4 h-4" />
+                  Jadi Premium
+                </Button>
+              )}
+              <Button variant="token" size="sm" onClick={() => setShowTokenModal(true)}>
                 <Coins className="w-4 h-4" />
                 Beli Token
               </Button>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border/50">
+              <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-card border border-border/50">
                 <span className="text-sm font-medium">{username}</span>
-                <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                  Basic
+                <span className={`text-xs px-2 py-0.5 rounded ${
+                  isPremium 
+                    ? 'bg-primary/10 text-primary font-semibold' 
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                  {isPremium ? 'Premium' : 'Basic'}
                 </span>
+                <Tooltip delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-help">
+                      <Coins className="w-4 h-4 text-amber-500" />
+                      <span className="text-sm font-semibold text-amber-500">
+                        {userTokens}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Token yang anda miliki</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <Button variant="ghost" size="icon" onClick={confirmLogout}>
                 <LogOut className="w-4 h-4" />
@@ -313,24 +394,40 @@ const Dashboard = () => {
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[280px]">
                   <div className="flex flex-col gap-4 mt-8">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border/50">
-                      <span className="text-sm font-medium">{username}</span>
-                      <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                        Basic
-                      </span>
+                    <div className="flex flex-col gap-4 px-4 py-4 rounded-lg bg-card border border-border/50">
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <span className="text-lg font-bold">{username}</span>
+                        <span className={`text-sm px-3 py-1 rounded-full ${
+                          isPremium 
+                            ? 'bg-primary/10 text-primary font-semibold' 
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {isPremium ? '👑 Premium' : 'Basic'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/10">
+                        <Coins className="w-5 h-5 text-amber-500" />
+                        <span className="text-base font-bold text-amber-500">
+                          {userTokens} Token
+                        </span>
+                      </div>
                     </div>
-                    <Button
-                      variant="premium"
-                      size="sm"
-                      className="w-full justify-start"
-                    >
-                      <Crown className="w-4 h-4" />
-                      Jadi Premium
-                    </Button>
+                    {!isPremium && (
+                      <Button
+                        variant="premium"
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={() => setShowPremiumModal(true)}
+                      >
+                        <Crown className="w-4 h-4" />
+                        Jadi Premium
+                      </Button>
+                    )}
                     <Button
                       variant="token"
                       size="sm"
                       className="w-full justify-start"
+                      onClick={() => setShowTokenModal(true)}
                     >
                       <Coins className="w-4 h-4" />
                       Beli Token
@@ -390,28 +487,35 @@ const Dashboard = () => {
         {/* Features */}
         {renderFeatures()}
 
-        {/* Upgrade CTA */}
-        <Card className="p-8 gradient-primary text-center shadow-premium border-0 relative overflow-hidden mt-12">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 animate-pulse-glow" />
-          <div className="relative z-10">
-            <h3 className="text-2xl font-bold mb-3 text-primary-foreground">
-              Tingkatkan potensi Anda!
-            </h3>
-            <p className="text-primary-foreground/90 mb-6">
-              Upgrade ke Premium untuk membuka semua fitur canggih.
-            </p>
-            <Button
-              variant="outline"
-              size="lg"
-              className="bg-background text-foreground hover:bg-background/90"
-            >
-              <Crown className="w-4 h-4" />
-              Upgrade Sekarang
-            </Button>
-          </div>
-        </Card>
+        {/* Upgrade CTA - Only show if not premium */}
+        {!isPremium && (
+          <Card className="p-8 gradient-primary text-center shadow-premium border-0 relative overflow-hidden mt-12">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 animate-pulse-glow" />
+            <div className="relative z-10">
+              <h3 className="text-2xl font-bold mb-3 text-primary-foreground">
+                Tingkatkan potensi Anda!
+              </h3>
+              <p className="text-primary-foreground/90 mb-6">
+                Upgrade ke Premium untuk membuka semua fitur canggih.
+              </p>
+              <Button
+                variant="outline"
+                size="lg"
+                className="bg-background text-foreground hover:bg-background/90"
+                onClick={() => setShowPremiumModal(true)}
+              >
+                <Crown className="w-4 h-4" />
+                Upgrade Sekarang
+              </Button>
+            </div>
+          </Card>
+        )}
       </div>
 
+      {/* Payment Modals */}
+      <PremiumModal open={showPremiumModal} onOpenChange={setShowPremiumModal} />
+      <TokenModal open={showTokenModal} onOpenChange={setShowTokenModal} />
+      
       {/* Logout Confirmation Dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>

@@ -2,7 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { BookOpen, CheckSquare, FileText, Calendar, Lightbulb, Code, ArrowLeft, Sparkles } from "lucide-react";
+import { BookOpen, CheckSquare, FileText, Calendar, Lightbulb, Code, ArrowLeft } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { dailyToolsApi } from "@/lib/api";
+import { toast } from "sonner";
+import { useUserStore } from "@/lib/user-store";
+import { GeneratedResultCard, LoadingStateCard } from "@/components/GeneratedResultCard";
 
 const kebutuhanOptions = [
   {
@@ -10,50 +15,123 @@ const kebutuhanOptions = [
     icon: BookOpen,
     header: "Mempelajari Topik Baru",
     subheader: "Dapatkan penjelasan mendalam & terstruktur.",
-    placeholder: "Contoh: Jelaskan konsep blockchain dengan analogi sederhana yang mudah dipahami pemula."
+    placeholder: "Contoh: Jelaskan konsep blockchain dengan analogi sederhana yang mudah dipahami pemula.",
+    apiCall: (prompt: string) => dailyToolsApi.promptEnhancerTopikBaru(prompt),
   },
   {
     id: "tugas",
     icon: CheckSquare,
     header: "Menyelesaikan Tugas",
     subheader: "Dapatkan hasil yang detail & akurat untuk pekerjaan.",
-    placeholder: "Contoh: Buatkan rangkuman 500 kata tentang dampak AI terhadap industri kreatif."
+    placeholder: "Contoh: Buatkan rangkuman 500 kata tentang dampak AI terhadap industri kreatif.",
+    apiCall: (prompt: string) => dailyToolsApi.promptEnhancerTugas(prompt),
   },
   {
     id: "konten",
     icon: FileText,
     header: "Membuat Konten",
     subheader: "Hasilkan ide & tulisan untuk blog, email, atau script.",
-    placeholder: "Contoh: Buatkan caption Instagram yang engaging untuk produk skincare alami."
+    placeholder: "Contoh: Buatkan caption Instagram yang engaging untuk produk skincare alami.",
+    apiCall: (prompt: string) => dailyToolsApi.promptEnhancerKonten(prompt),
   },
   {
     id: "rencana",
     icon: Calendar,
     header: "Membuat Rencana/Jadwal",
     subheader: "Buat rencana kerja atau jadwal yang sistematis.",
-    placeholder: "Contoh: Susunkan jadwal belajar 2 minggu untuk persiapan ujian TOEFL."
+    placeholder: "Contoh: Susunkan jadwal belajar 2 minggu untuk persiapan ujian TOEFL.",
+    apiCall: (prompt: string) => dailyToolsApi.promptEnhancerRencana(prompt),
   },
   {
     id: "brainstorm",
     icon: Lightbulb,
     header: "Brainstorming Ide",
     subheader: "Gali berbagai kemungkinan & sudut pandang baru.",
-    placeholder: "Contoh: Berikan 10 ide nama brand untuk coffee shop dengan tema sustainable living."
+    placeholder: "Contoh: Berikan 10 ide nama brand untuk coffee shop dengan tema sustainable living.",
+    apiCall: (prompt: string) => dailyToolsApi.promptEnhancerBrainstorming(prompt),
   },
   {
     id: "koding",
     icon: Code,
     header: "Bantuan Koding/Teknis",
     subheader: "Dapatkan solusi, penjelasan, & optimasi kode.",
-    placeholder: "Contoh: Jelaskan cara kerja React hooks useState dan berikan contoh praktisnya."
+    placeholder: "Contoh: Jelaskan cara kerja React hooks useState dan berikan contoh praktisnya.",
+    apiCall: (prompt: string) => dailyToolsApi.promptEnhancerKoding(prompt),
   }
 ];
 
 export const PromptEnhancerFeature = () => {
   const [selectedKebutuhan, setSelectedKebutuhan] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [result, setResult] = useState<string | null>(null);
+  const { refreshProfile } = useUserStore();
 
   const selected = kebutuhanOptions.find(opt => opt.id === selectedKebutuhan);
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      if (!selected) throw new Error("No option selected");
+      return await selected.apiCall(prompt);
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        // Handle different response formats
+        let resultText = '';
+        
+        if (typeof data.data === 'string') {
+          resultText = data.data;
+        } else if (data.data.enhanced_prompt) {
+          resultText = data.data.enhanced_prompt;
+        } else if (data.data.result) {
+          resultText = data.data.result;
+        } else if (data.data.prompt) {
+          resultText = data.data.prompt;
+        } else if (data.data.improved_prompt) {
+          resultText = data.data.improved_prompt;
+        } else {
+          // If no recognized field, show error message
+          console.error('Unexpected response format:', data.data);
+          toast.error('Format response tidak dikenali. Silakan coba lagi.');
+          return;
+        }
+        
+        setResult(resultText);
+        refreshProfile();
+      }
+    },
+    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+      console.error("Prompt Enhancer error:", error);
+      if (error.error === "Insufficient tokens") {
+        toast.error(
+          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
+        );
+      } else {
+        toast.error(error.error || "Terjadi kesalahan saat enhance prompt");
+      }
+    },
+  });
+
+  const handleCopy = () => {
+    if (result) {
+      navigator.clipboard.writeText(result);
+      toast.success("Hasil berhasil disalin!");
+    }
+  };
+
+  const handleRegenerate = () => {
+    generateMutation.mutate();
+  };
+
+  const handleReset = () => {
+    setResult(null);
+    setPrompt("");
+  };
+
+  const handleBackToSelection = () => {
+    setSelectedKebutuhan(null);
+    setPrompt("");
+    setResult(null);
+  };
 
   if (selected) {
     const Icon = selected.icon;
@@ -61,10 +139,7 @@ export const PromptEnhancerFeature = () => {
       <div className="space-y-6 animate-fade-in">
         <Button 
           variant="ghost" 
-          onClick={() => {
-            setSelectedKebutuhan(null);
-            setPrompt("");
-          }}
+          onClick={handleBackToSelection}
           className="mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -88,11 +163,27 @@ export const PromptEnhancerFeature = () => {
         <Button 
           className="w-full" 
           size="lg"
-          disabled={!prompt.trim()}
+          disabled={!prompt.trim() || generateMutation.isPending}
+          onClick={() => generateMutation.mutate()}
         >
-          <Sparkles className="w-4 h-4" />
+          <Icon className="w-4 h-4" />
           Upgrade Prompt
         </Button>
+
+        {generateMutation.isPending && (
+          <LoadingStateCard message="ElevAI sedang meng-upgrade prompt Anda..." />
+        )}
+
+        {result && !generateMutation.isPending && (
+          <GeneratedResultCard
+            result={result}
+            onCopy={handleCopy}
+            onRegenerate={handleRegenerate}
+            onReset={handleReset}
+            isRegenerating={generateMutation.isPending}
+            requiredTokens={1}
+          />
+        )}
       </div>
     );
   }

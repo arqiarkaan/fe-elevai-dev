@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import ReactMarkdown from 'react-markdown';
 import {
   Upload,
   Loader2,
@@ -21,6 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useMutation } from '@tanstack/react-query';
+import { personalBrandingApi } from '@/lib/api';
+import { useUserStore } from '@/lib/user-store';
 
 type Step = 1 | 2 | 3;
 
@@ -39,8 +43,13 @@ interface FormData {
 
 export const InstagramBioFeature = () => {
   const [step, setStep] = useState<Step>(1);
-  const [loading, setLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [bioContent, setBioContent] = useState<string>('');
+  const [analisisAwal, setAnalisisAwal] = useState<string>('');
+  const [generatedBios, setGeneratedBios] = useState<string[]>([]);
+  const { refreshProfile } = useUserStore();
+
   const [formData, setFormData] = useState<FormData>({
     tujuanUtama: '',
     tujuanLainnya: '',
@@ -54,6 +63,70 @@ export const InstagramBioFeature = () => {
     hashtag: '',
   });
 
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      return await personalBrandingApi.instagramBioUploadImage(file);
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setBioContent(data.data.bio_text);
+        analyzeMutation.mutate(data.data.bio_text);
+      }
+    },
+    onError: (error: { error?: string }) => {
+      toast.error(error.error || 'Gagal mengupload gambar');
+    },
+  });
+
+  const analyzeMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await personalBrandingApi.instagramBioAnalyze(content);
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setAnalisisAwal(data.data.analysis);
+        setStep(2);
+      }
+    },
+    onError: (error: { error?: string }) => {
+      toast.error(error.error || 'Gagal menganalisis bio');
+    },
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      return await personalBrandingApi.instagramBioGenerate({
+        bioContent,
+        analisisAwal,
+        tujuanUtama: formData.tujuanUtama === 'lainnya' ? formData.tujuanLainnya : formData.tujuanUtama,
+        gayaTulisan: formData.gayaTulisan === 'lainnya' ? formData.gayaLainnya : formData.gayaTulisan,
+        siapaKamu: formData.siapa,
+        targetAudiens: formData.targetAudiens,
+        pencapaian: formData.pencapaian.filter(p => p.trim() !== ''),
+        callToAction: formData.cta,
+        ...(formData.punyaHashtag === 'ya' && formData.hashtag ? { hashtag: formData.hashtag } : {}),
+      });
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setGeneratedBios(data.data.bios);
+        setStep(3);
+        refreshProfile();
+      }
+    },
+    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+      if (error.error === 'Insufficient tokens') {
+        toast.error(
+          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
+        );
+      } else if (error.error === 'Premium subscription required') {
+        toast.error('Fitur ini memerlukan langganan premium');
+      } else {
+        toast.error(error.error || 'Terjadi kesalahan saat generate bio');
+      }
+    },
+  });
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
@@ -62,21 +135,18 @@ export const InstagramBioFeature = () => {
         setUploadedImage(reader.result as string);
       };
       reader.readAsDataURL(file);
+      setUploadedFile(file);
     } else {
       toast.error('Harap pilih file gambar yang valid');
     }
   };
 
   const handleAnalyze = () => {
-    if (!uploadedImage) {
+    if (!uploadedFile) {
       toast.error('Harap upload gambar bio Instagram terlebih dahulu');
       return;
     }
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setStep(2);
-    }, 2000);
+    uploadMutation.mutate(uploadedFile);
   };
 
   const addPencapaian = () => {
@@ -105,14 +175,6 @@ export const InstagramBioFeature = () => {
     });
   };
 
-  const handleGenerateBio = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setStep(3);
-    }, 2000);
-  };
-
   const siapaWordCount = formData.siapa.trim().split(/\s+/).length;
   const isSiapaValid =
     formData.siapa.trim() !== '' && siapaWordCount >= 3 && siapaWordCount <= 5;
@@ -136,6 +198,10 @@ export const InstagramBioFeature = () => {
   const handleAnalyzeAnother = () => {
     setStep(1);
     setUploadedImage(null);
+    setUploadedFile(null);
+    setBioContent('');
+    setAnalisisAwal('');
+    setGeneratedBios([]);
     setFormData({
       tujuanUtama: '',
       tujuanLainnya: '',
@@ -149,12 +215,6 @@ export const InstagramBioFeature = () => {
       hashtag: '',
     });
   };
-
-  const generatedBios = [
-    'Esports Champions | MSC & MPL Legends 🏆 | DM for Collab #GoOnic',
-    "Pro Gaming Titans | 9x MPL Champs | Let's Connect! DM Us 👾 #GoOnic",
-    'Leading Esports Team | Multi-Champ Winners | Collaborate with Us! 👥 #GoOnic',
-  ];
 
   const renderStepIndicator = () => (
     <div className="flex justify-center items-center gap-4 mb-8">
@@ -234,14 +294,14 @@ export const InstagramBioFeature = () => {
 
             <Button
               onClick={handleAnalyze}
-              disabled={loading || !uploadedImage}
+              disabled={uploadMutation.isPending || analyzeMutation.isPending || !uploadedFile}
               className="w-full"
               size="lg"
             >
-              {loading ? (
+              {uploadMutation.isPending || analyzeMutation.isPending ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Menganalisis...
+                  {uploadMutation.isPending ? 'Mengupload...' : 'Menganalisis...'}
                 </>
               ) : (
                 <>
@@ -276,20 +336,9 @@ export const InstagramBioFeature = () => {
             <Sparkles className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
             <div>
               <h3 className="font-bold text-lg mb-2">Hasil Analisis Awal</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Bio Instagram untuk onic.esports secara efektif memanfaatkan
-                kejelasan dan pencitraan merek pribadi dengan menyatakan
-                identitas mereka sebagai tim esports dan posisi puncak mereka di
-                MPL, yang membangun kredibilitas dan otoritas. Penggunaan liga
-                esports tertentu seperti IFel, MDL, dan DFNC menunjukkan
-                jangkauan kompetitif yang luas, sehingga menarik bagi target
-                audiens mereka. Namun, penyertaan beberapa akun dan tautan dalam
-                ruang yang ringkas dapat menyebabkan kebingungan, mengurangi
-                fokus, dan melemahkan ajakan bertindak. Menyederhanakan
-                informasi kontak dan tautan atau menggabungkannya dapat
-                meningkatkan pengalaman pengguna dan menyederhanakan potensi
-                tindakan interaksi.
-              </p>
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <ReactMarkdown>{analisisAwal}</ReactMarkdown>
+              </div>
             </div>
           </div>
         </Card>
@@ -501,12 +550,12 @@ export const InstagramBioFeature = () => {
             </div>
 
             <Button
-              onClick={handleGenerateBio}
-              disabled={loading || !isStep2Valid}
+              onClick={() => generateMutation.mutate()}
+              disabled={generateMutation.isPending || !isStep2Valid}
               className="w-full"
               size="lg"
             >
-              {loading ? (
+              {generateMutation.isPending ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Menggenerate...

@@ -3,8 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { User, GraduationCap, Calendar, Building, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
+import { User, GraduationCap, Calendar, Building, ArrowRight, Loader2, ArrowLeft, Copy, Download, CheckCircle2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { useMutation } from "@tanstack/react-query";
+import { studentDevelopmentApi } from "@/lib/api";
+import { toast } from "sonner";
+import { useUserStore } from "@/lib/user-store";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -25,21 +29,13 @@ interface FormData {
   sliceOfLife: string;
 }
 
-const ikigaiOptions = [
-  "Digital Storycrafter: Peran utama kamu adalah meramu kode dan narasi humanis jadi website interaktif yang bikin user merasa \"dianggap\". Contoh konkret: bikin platform komunitas kampus yang langsung kasih rekomendasi self-care harian buat mahasiswa yang lagi burnout mata kuliah.",
-  "Insight Architect: Peran utama kamu adalah menyelam ke data perilaku orang, lalu membangun solusi tech yang \"ngeh\" sama emosi penggunanya. Contoh konkret: skripsi analitik mood tracker yang prediksi kapan teman kos butuh ajakan nongkrong.",
-  "Empathic Debugger: Peran utama kamu adalah memecah masalah sosial layaknya bug—pelan, teliti, dan penuh empati. Contoh konkret: volunteering di hotline kesehatan mental sambil ngembangin chatbot pendengar curhat."
-];
-
-const sliceOptions = [
-  "Gue pengen bantu orang yang ngerasa \"cuma angka NIM\" biar sadar suaranya penting lewat platform digital ramah hati.",
-  "Gue pengen temenin teman-teman introvert nemu safe space online buat eksplor bakat tanpa takut di-judge.",
-  "Gue pengen nunjukkin kalau teknologi bisa jadi pelukan, bukan cuma layar dingin."
-];
+interface Stage1Response {
+  ikigai_spots: Array<{ title: string; description: string }>;
+  life_purposes: Array<{ slice_of_life_purpose: string }>;
+}
 
 export const IkigaiFeature = () => {
   const [step, setStep] = useState<Step>(1);
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     nama: "",
     jurusan: "",
@@ -56,10 +52,85 @@ export const IkigaiFeature = () => {
     ikigaiSpot: "",
     sliceOfLife: ""
   });
+  const [stage1Data, setStage1Data] = useState<Stage1Response | null>(null);
+  const [finalResult, setFinalResult] = useState<{ analysis: string; stage1_data: unknown } | null>(null);
+  const { refreshProfile } = useUserStore();
 
   const isStep1Valid = formData.nama && formData.jurusan && formData.semester && formData.universitas && formData.karirSesuai;
   const isStep3Valid = formData.mbti && formData.via1 && formData.via2 && formData.via3 && formData.career1 && formData.career2 && formData.career3;
   const isStep4Valid = formData.ikigaiSpot && formData.sliceOfLife;
+
+  const stage1Mutation = useMutation({
+    mutationFn: async () => {
+      return await studentDevelopmentApi.ikigaiStage1({
+        nama: formData.nama,
+        jurusan: formData.jurusan,
+        semester: parseInt(formData.semester),
+        universitas: formData.universitas,
+        karirSesuaiJurusan: formData.karirSesuai === "ya" ? "ya_sesuai" : "tidak_sesuai",
+        mbtiType: formData.mbti,
+        viaStrengths: [formData.via1, formData.via2, formData.via3],
+        careerRoles: [formData.career1, formData.career2, formData.career3],
+      });
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setStage1Data(data.data);
+        setStep(4);
+        refreshProfile();
+      }
+    },
+    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+      console.error("Ikigai Stage 1 error:", error);
+      if (error.error === "Insufficient tokens") {
+        toast.error(
+          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
+        );
+      } else if (error.error === "Premium subscription required") {
+        toast.error("Fitur ini memerlukan langganan premium");
+      } else {
+        toast.error(error.error || "Terjadi kesalahan saat menganalisis");
+      }
+    },
+  });
+
+  const finalMutation = useMutation({
+    mutationFn: async () => {
+      return await studentDevelopmentApi.ikigaiFinal({
+        stage1Data: {
+          nama: formData.nama,
+          jurusan: formData.jurusan,
+          semester: parseInt(formData.semester),
+          universitas: formData.universitas,
+          karirSesuaiJurusan: formData.karirSesuai === "ya" ? "ya_sesuai" : "tidak_sesuai",
+          mbtiType: formData.mbti,
+          viaStrengths: [formData.via1, formData.via2, formData.via3],
+          careerRoles: [formData.career1, formData.career2, formData.career3],
+        },
+        selectedIkigaiSpot: formData.ikigaiSpot,
+        selectedSliceOfLife: formData.sliceOfLife,
+      });
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setFinalResult(data.data);
+        setStep(5);
+        refreshProfile();
+      }
+    },
+    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+      console.error("Ikigai Final error:", error);
+      if (error.error === "Insufficient tokens") {
+        toast.error(
+          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
+        );
+      } else if (error.error === "Premium subscription required") {
+        toast.error("Fitur ini memerlukan langganan premium");
+      } else {
+        toast.error(error.error || "Terjadi kesalahan saat menganalisis");
+      }
+    },
+  });
 
   const handleNext = async () => {
     if (step === 1 && isStep1Valid) {
@@ -67,91 +138,18 @@ export const IkigaiFeature = () => {
     } else if (step === 2) {
       setStep(3);
     } else if (step === 3 && isStep3Valid) {
-      setLoading(true);
-      setTimeout(() => {
-        setLoading(false);
-        setStep(4);
-      }, 1500);
+      stage1Mutation.mutate();
     } else if (step === 4 && isStep4Valid) {
-      setLoading(true);
-      setTimeout(() => {
-        setLoading(false);
-        setStep(5);
-      }, 1500);
+      finalMutation.mutate();
     }
   };
 
-  const mockResult = `
-Nama: ${formData.nama}
-Jurusan: ${formData.jurusan}
-MBTI: ${formData.mbti}
-VIA Strengths: ${formData.via1}, ${formData.via2}, ${formData.via3}
-Career Roles: ${formData.career1}, ${formData.career2}, ${formData.career3}
+  const handleDownloadPDF = () => {
+    // TODO: Implement PDF download
+    toast.info('Fitur download PDF akan segera tersedia');
+  };
 
-**Ikigai Spot Dipilih:** ${formData.ikigaiSpot.substring(0, 100)}...
-
-**Slice of Life Dipilih:** ${formData.sliceOfLife}
-
----
-
-## 1. Strategi Realistis Awal per Track
-
-### Employee Track
-Bayangin ${formData.nama} kerja di startup health-tech sebagai "Empathic QA/UX Engineer." Job-desc-nya: ngetes fitur, cari bug, sambil ngobrol sama user—khususnya yang pakai aplikasi buat curhat. Jadi, debugging plus listening ear. Pelan, teliti, empatik: ${formData.mbti} mode ON.
-
-**Bisa mulai sekarang?** Ikut program magang remote atau volunteership di platform kesehatan mental; cari posisi QA Tester/User Research, kirim portofolio mini berisi analisis bug + saran perbaikan empatik.
-
-### Self-Employed Track
-Menjadi "Freelance Empathic Chatbot Builder." ${formData.nama} bikin chatbot pendengar curhat, jual jasa ke NGO, sekolah, atau komunitas. Client senang karena dapat solusi tech yang hangat, user merasa dipeluk, dan ${formData.nama} tetap bebas ngatur waktu kuliah.
-
-**Bisa mulai sekarang?** Buka akun di Fiverr/LinkedIn, pasang demo chatbot (pakai Dialogflow/Rasa), tulis caption sederhana: "Bot ini nggak cuma jawab, tapi juga mendengar."
-
-### Business Owner Track
-Mendirikan micro-studio "Teknologi Pelukan." Produknya: suite tools low-code untuk konselor dan organisasi sosial—mulai dari chatbot curhat, dashboard progress, sampai plugin "empathy meter." Re-invest profit ke riset psikologi + AI etis.
-
-**Bisa mulai sekarang?** Bentuk tim 2-3 teman sejurusan, bikin landing page + prototype di weekend hackathon, kumpulkan feedback dari komunitas kesehatan mental.
-
-### Jurusan-Based Track
-Fokus sebagai "Full-Stack Web Dev Pro-Social." Ini jalur konvensional: bangun portofolio website/apps yang menonjolkan fitur inklusif—dark mode nyaman mata, bahasa ramah, dan badge "Safe Space." Kerjaan bisa di agency, korporat, atau research lab kampus.
-
-**Bisa mulai sekarang?** Refactor tugas kuliah jadi project GitHub: "CurhatHub"—web forum anonim dengan sistem moderasi empatik.
-
----
-
-## 2. Penjabaran per Track
-
-### Employee Track
-- **Peran:** Empathic QA/UX Engineer di startup health-tech
-- **Hard Skills (Top 3):** Manual & automated testing dasar, UX research interview, Basic front-end debugging (HTML/CSS/JS)
-- **Soft Skills (Top 3):** Active listening, Detail-oriented mindset, Compassionate communication
-- **Alasan Personal Match:** ${formData.nama} senang "mecahin bug sosial," ${formData.mbti} suka meaningful impact, dan strength ${formData.via1} + ${formData.via2} bikin proses QA terasa human-centered, bukan sekadar ceklis.
-
-### Self-Employed Track
-- **Peran:** Freelance Empathic Chatbot Builder
-- **Hard Skills (Top 3):** Conversational design (Dialogflow/Rasa), Python/Node scripting, Basic data privacy & ethics
-- **Soft Skills (Top 3):** Creativity (meracik persona bot), Client empathy, Self-management
-- **Alasan Personal Match:** Track ini memadukan kreativitas dan detektif-mode menemukan pola curhat user. Plus fleksibel dengan ritme kuliah ${formData.jurusan}.
-
-### Business Owner Track
-- **Peran:** Founder Micro-Studio "Teknologi Pelukan"
-- **Hard Skills (Top 3):** Product roadmap & MVP building, Fundraising/pitch deck, Team leadership agile
-- **Soft Skills (Top 3):** Visionary thinking, Resilience, Ethical decision-making
-- **Alasan Personal Match:** VIA ${formData.via1} & ${formData.via2} = modal bikin solusi inovatif; ${formData.via3} jadi kompas moral saat scaling. ${formData.mbti} umumnya nyaman jadi mission-driven leader ketimbang bos diktator.
-
-### Jurusan-Based Track
-- **Peran:** Full-Stack Web Dev Pro-Social
-- **Hard Skills (Top 3):** React / Next.js, REST & database design, Accessibility & inclusive design
-- **Soft Skills (Top 3):** Problem framing ala "detektif", Collaboration, Continuous learning
-- **Alasan Personal Match:** Langsung nyambung ke kurikulum ${formData.jurusan}, memudahkan cari internship, skripsi, dan network dosen. Impact-driven theme bikin tetap selaras dengan ikigai "teknologi = pelukan."
-
----
-
-## 3. CTA Penutup
-
-Sekarang pilih satu track yang paling bikin mata kamu berbinar (dan detak jantung excited) saat ngebayangin hari-hari ke depan. Mulai dari situ dulu—karena ketika langkah pertama selaras sama empati dan kreativitasmu, semua skill teknis akan nyusul dengan lebih enteng. Kamu #TeamEmpathicDebugger, ayo tentukan jalur utamanya hari ini!
-`;
-
-  if (step === 5) {
+  if (step === 5 && finalResult) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div>
@@ -159,26 +157,52 @@ Sekarang pilih satu track yang paling bikin mata kamu berbinar (dan detak jantun
           <p className="text-muted-foreground">Berikut adalah strategi karier & bisnis yang dipersonalisasi untukmu.</p>
         </div>
 
-        <div className="flex items-center gap-2 text-lg font-semibold">
-          <ArrowRight className="w-5 h-5 text-primary" />
-          <span>Hasil Strategi Karier & Bisnis:</span>
-        </div>
-
-        <Button className="w-full" size="lg">
-          <ArrowRight className="w-4 h-4" />
-          Unduh PDF
+        {/* Download PDF Button */}
+        <Button 
+          onClick={handleDownloadPDF}
+          className="flex items-center justify-center gap-2 w-full"
+        >
+          <Download className="w-4 h-4" />
+          Download PDF
         </Button>
 
-        <Card className="p-6 bg-card/50 border-border/50 space-y-4">
-          <h3 className="text-xl font-bold">Data Analisis</h3>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            <ReactMarkdown>{mockResult.split('---')[0]}</ReactMarkdown>
+        <div className="flex items-center gap-2 text-lg font-semibold">
+          <ArrowRight className="w-5 h-5 text-primary" />
+          <span>Hasil Analisis Ikigai & Strategi Karier:</span>
+        </div>
+
+        {/* Data Analisis */}
+        <Card className="p-6 bg-card/50 border-border/50">
+          <h3 className="font-bold text-lg mb-4 text-primary flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" />
+            Data Analisis
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <p><strong>Nama:</strong> {formData.nama}</p>
+              <p><strong>Jurusan:</strong> {formData.jurusan}</p>
+              <p><strong>Semester:</strong> {formData.semester}</p>
+              <p><strong>Universitas:</strong> {formData.universitas}</p>
+            </div>
+            <div>
+              <p><strong>Karir Sesuai:</strong> {formData.karirSesuai === 'ya' ? 'Sesuai Jurusan' : 'Eksplorasi'}</p>
+              <p><strong>VIA Strengths:</strong> {formData.via1}, {formData.via2}, {formData.via3}</p>
+              <p><strong>MBTI:</strong> {formData.mbti}</p>
+            </div>
+            <div className="md:col-span-2">
+              <p><strong>Ikigai Spot yang Dipilih:</strong></p>
+              <p className="text-muted-foreground">{formData.ikigaiSpot}</p>
+            </div>
+            <div className="md:col-span-2">
+              <p><strong>Slice of Life yang Dipilih:</strong></p>
+              <p className="text-muted-foreground">{formData.sliceOfLife}</p>
+            </div>
           </div>
         </Card>
 
         <Card className="p-6 bg-card/50 border-border/50">
           <div className="prose prose-sm max-w-none dark:prose-invert">
-            <ReactMarkdown>{mockResult.split('---')[1]}</ReactMarkdown>
+            <ReactMarkdown>{finalResult.analysis}</ReactMarkdown>
           </div>
         </Card>
 
@@ -187,6 +211,8 @@ Sekarang pilih satu track yang paling bikin mata kamu berbinar (dan detak jantun
           className="w-full" 
           onClick={() => {
             setStep(1);
+            setStage1Data(null);
+            setFinalResult(null);
             setFormData({
               nama: "", jurusan: "", semester: "", universitas: "", karirSesuai: "",
               mbti: "", via1: "", via2: "", via3: "", career1: "", career2: "", career3: "",
@@ -419,10 +445,10 @@ Sekarang pilih satu track yang paling bikin mata kamu berbinar (dan detak jantun
           <Button 
             className="w-full" 
             size="lg"
-            disabled={!isStep3Valid || loading}
+            disabled={!isStep3Valid || stage1Mutation.isPending}
             onClick={handleNext}
           >
-            {loading ? (
+            {stage1Mutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Menganalisis...
@@ -437,7 +463,7 @@ Sekarang pilih satu track yang paling bikin mata kamu berbinar (dan detak jantun
         </>
       )}
 
-      {step === 4 && (
+      {step === 4 && stage1Data && (
         <>
           <div>
             <h2 className="text-2xl md:text-3xl font-bold mb-2">Step 4: Final Ikigai Analysis</h2>
@@ -447,36 +473,36 @@ Sekarang pilih satu track yang paling bikin mata kamu berbinar (dan detak jantun
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <Label>Pilih Ikigai Spot</Label>
-              {ikigaiOptions.map((option, idx) => (
+              {stage1Data.ikigai_spots.map((spot, idx) => (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => setFormData({...formData, ikigaiSpot: option})}
+                  onClick={() => setFormData({...formData, ikigaiSpot: `${spot.title}: ${spot.description}`})}
                   className={`w-full p-4 text-left text-sm rounded-md border transition-smooth ${
-                    formData.ikigaiSpot === option
+                    formData.ikigaiSpot.includes(spot.title)
                       ? "border-primary bg-primary/10"
                       : "border-border bg-card hover:border-primary/50"
                   }`}
                 >
-                  {option}
+                  <strong>{spot.title}:</strong> {spot.description}
                 </button>
               ))}
             </div>
 
             <div className="space-y-3">
               <Label>Pilih Slice of Life Purpose</Label>
-              {sliceOptions.map((option, idx) => (
+              {stage1Data.life_purposes.map((purpose, idx) => (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => setFormData({...formData, sliceOfLife: option})}
+                  onClick={() => setFormData({...formData, sliceOfLife: purpose.slice_of_life_purpose})}
                   className={`w-full p-4 text-left text-sm rounded-md border transition-smooth ${
-                    formData.sliceOfLife === option
+                    formData.sliceOfLife === purpose.slice_of_life_purpose
                       ? "border-primary bg-primary/10"
                       : "border-border bg-card hover:border-primary/50"
                   }`}
                 >
-                  {option}
+                  {purpose.slice_of_life_purpose}
                 </button>
               ))}
             </div>
@@ -485,10 +511,10 @@ Sekarang pilih satu track yang paling bikin mata kamu berbinar (dan detak jantun
           <Button 
             className="w-full" 
             size="lg"
-            disabled={!isStep4Valid || loading}
+            disabled={!isStep4Valid || finalMutation.isPending}
             onClick={handleNext}
           >
-            {loading ? (
+            {finalMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Menganalisis Sweetspot...

@@ -3,7 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Globe, MapPin, BookOpen, Heart, Award, Target, Sparkles } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Globe, MapPin, BookOpen, Heart, Award, Target, Sparkles, Copy, Loader2 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { studentDevelopmentApi } from "@/lib/api";
+import { toast } from "sonner";
+import { useUserStore } from "@/lib/user-store";
+import ReactMarkdown from "react-markdown";
 
 export const EssayExchangeFeature = () => {
   const [formData, setFormData] = useState({
@@ -14,8 +20,96 @@ export const EssayExchangeFeature = () => {
     skillPengalaman: "",
     rencanaPasca: ""
   });
+  const [result, setResult] = useState<{ essay: string; tokens_used?: number } | null>(null);
+  const { refreshProfile } = useUserStore();
 
   const isValid = Object.values(formData).every(val => val.trim() !== "");
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      return await studentDevelopmentApi.essayExchange({
+        programName: formData.namaProgram,
+        negaraUniversitas: formData.negaraUniversitas,
+        motivasiAkademik: formData.motivasiAkademik,
+        motivasiPribadi: formData.motivasiPribadi,
+        skillPengalaman: formData.skillPengalaman,
+        rencanKontribusi: formData.rencanaPasca,
+      });
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setResult(data.data);
+        refreshProfile();
+      }
+    },
+    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+      console.error("Essay Exchange error:", error);
+      if (error.error === "Insufficient tokens") {
+        toast.error(
+          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
+        );
+      } else if (error.error === "Premium subscription required") {
+        toast.error("Fitur ini memerlukan langganan premium");
+      } else {
+        toast.error(error.error || "Terjadi kesalahan saat generate esai");
+      }
+    },
+  });
+
+  const handleCopy = () => {
+    if (result?.essay) {
+      navigator.clipboard.writeText(result.essay);
+      toast.success("Esai berhasil disalin!");
+    }
+  };
+
+  const handleGenerate = () => {
+    generateMutation.mutate();
+  };
+
+  if (result) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold mb-2">AI Motivation Letter Assistant</h2>
+          <p className="text-muted-foreground">Hasil motivation letter untuk program impianmu.</p>
+        </div>
+
+        <Card className="p-6 bg-card/50 border-border/50 relative">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleCopy}
+            className="absolute top-4 right-4"
+          >
+            <Copy className="w-4 h-4" />
+          </Button>
+          <div className="prose prose-sm max-w-none dark:prose-invert pr-12">
+            <ReactMarkdown>{result.essay}</ReactMarkdown>
+          </div>
+        </Card>
+
+        <Button 
+          variant="outline"
+          className="w-full" 
+          onClick={() => {
+            setResult(null);
+            setFormData({
+              namaProgram: "",
+              negaraUniversitas: "",
+              motivasiAkademik: "",
+              motivasiPribadi: "",
+              skillPengalaman: "",
+              rencanaPasca: ""
+            });
+          }}
+        >
+          <Sparkles className="w-4 h-4" />
+          Generate Esai Baru
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -105,10 +199,20 @@ export const EssayExchangeFeature = () => {
       <Button 
         className="w-full" 
         size="lg"
-        disabled={!isValid}
+        disabled={!isValid || generateMutation.isPending}
+        onClick={handleGenerate}
       >
-        <Sparkles className="w-4 h-4" />
-        Generate Draf Esai
+        {generateMutation.isPending ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Generating...
+          </>
+        ) : (
+          <>
+            <Sparkles className="w-4 h-4" />
+            Generate Draf Esai
+          </>
+        )}
       </Button>
     </div>
   );

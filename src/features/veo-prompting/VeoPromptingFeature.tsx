@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Video, Sparkles } from "lucide-react";
+import { Video } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,6 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useMutation } from "@tanstack/react-query";
+import { dailyToolsApi } from "@/lib/api";
+import { toast } from "sonner";
+import { useUserStore } from "@/lib/user-store";
+import { GeneratedResultCard, LoadingStateCard } from "@/components/GeneratedResultCard";
 
 const waktuOptions = ["Pagi", "Siang", "Sore", "Malam", "Senja (Golden Hour)", "Fajar (Blue Hour)"];
 
@@ -29,8 +34,96 @@ export const VeoPromptingFeature = () => {
     dialog: "",
     detail: ""
   });
+  const [result, setResult] = useState<string | null>(null);
+  const { refreshProfile } = useUserStore();
 
   const isValid = formData.subjek && formData.aksi && formData.lokasi;
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      return await dailyToolsApi.promptVeo({
+        subjekUtama: formData.subjek,
+        aksiKegiatan: formData.aksi,
+        ekspresiEmosi: formData.ekspresi,
+        lokasiTempat: formData.lokasi,
+        waktu: formData.waktu,
+        pencahayaan: formData.pencahayaan,
+        gerakanKamera: formData.gerakanKamera,
+        gayaVideo: formData.gaya,
+        suasanaVideo: formData.suasana,
+        suaraMusik: formData.suara,
+        dialog: formData.dialog,
+        detailTambahan: formData.detail,
+      });
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        // Handle different response formats
+        let resultText = '';
+        
+        if (typeof data.data === 'string') {
+          resultText = data.data;
+        } else if (data.data.prompt) {
+          resultText = data.data.prompt;
+        } else if (data.data.result) {
+          resultText = data.data.result;
+        } else if (data.data.enhanced_prompt) {
+          resultText = data.data.enhanced_prompt;
+        } else if (data.data.video_prompt) {
+          resultText = data.data.video_prompt;
+        } else if (data.data.veo_prompt) {
+          resultText = data.data.veo_prompt;
+        } else {
+          // If no recognized field, show error message
+          console.error('Unexpected response format:', data.data);
+          toast.error('Format response tidak dikenali. Silakan coba lagi.');
+          return;
+        }
+        
+        setResult(resultText);
+        refreshProfile();
+      }
+    },
+    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+      console.error("Veo Prompting error:", error);
+      if (error.error === "Insufficient tokens") {
+        toast.error(
+          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
+        );
+      } else {
+        toast.error(error.error || "Terjadi kesalahan saat generate prompt");
+      }
+    },
+  });
+
+  const handleCopy = () => {
+    if (result) {
+      navigator.clipboard.writeText(result);
+      toast.success("Hasil berhasil disalin!");
+    }
+  };
+
+  const handleRegenerate = () => {
+    generateMutation.mutate();
+  };
+
+  const handleReset = () => {
+    setResult(null);
+    setFormData({
+      subjek: "",
+      aksi: "",
+      ekspresi: "",
+      lokasi: "",
+      waktu: "Pagi",
+      pencahayaan: "",
+      gerakanKamera: "",
+      gaya: "",
+      suasana: "",
+      suara: "",
+      dialog: "",
+      detail: ""
+    });
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -158,11 +251,27 @@ export const VeoPromptingFeature = () => {
       <Button 
         className="w-full" 
         size="lg"
-        disabled={!isValid}
+        disabled={!isValid || generateMutation.isPending}
+        onClick={() => generateMutation.mutate()}
       >
         <Video className="w-4 h-4" />
         Buat Prompt
       </Button>
+
+      {generateMutation.isPending && (
+        <LoadingStateCard message="ElevAI sedang menggenerate prompt Veo..." />
+      )}
+
+      {result && !generateMutation.isPending && (
+        <GeneratedResultCard
+          result={result}
+          onCopy={handleCopy}
+          onRegenerate={handleRegenerate}
+          onReset={handleReset}
+          isRegenerating={generateMutation.isPending}
+          requiredTokens={1}
+        />
+      )}
     </div>
   );
 };
