@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import {
   Upload,
   Loader2,
@@ -98,13 +98,21 @@ export const InstagramBioFeature = () => {
       return await personalBrandingApi.instagramBioGenerate({
         bioContent,
         analisisAwal,
-        tujuanUtama: formData.tujuanUtama === 'lainnya' ? formData.tujuanLainnya : formData.tujuanUtama,
-        gayaTulisan: formData.gayaTulisan === 'lainnya' ? formData.gayaLainnya : formData.gayaTulisan,
+        tujuanUtama:
+          formData.tujuanUtama === 'lainnya'
+            ? formData.tujuanLainnya
+            : formData.tujuanUtama,
+        gayaTulisan:
+          formData.gayaTulisan === 'lainnya'
+            ? formData.gayaLainnya
+            : formData.gayaTulisan,
         siapaKamu: formData.siapa,
         targetAudiens: formData.targetAudiens,
-        pencapaian: formData.pencapaian.filter(p => p.trim() !== ''),
+        pencapaian: formData.pencapaian.filter((p) => p.trim() !== ''),
         callToAction: formData.cta,
-        ...(formData.punyaHashtag === 'ya' && formData.hashtag ? { hashtag: formData.hashtag } : {}),
+        ...(formData.punyaHashtag === 'ya' && formData.hashtag
+          ? { hashtag: formData.hashtag }
+          : {}),
       });
     },
     onSuccess: (data) => {
@@ -114,7 +122,11 @@ export const InstagramBioFeature = () => {
         refreshProfile();
       }
     },
-    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+    onError: (error: {
+      error?: string;
+      current_balance?: number;
+      need_to_purchase?: number;
+    }) => {
       if (error.error === 'Insufficient tokens') {
         toast.error(
           `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
@@ -294,14 +306,20 @@ export const InstagramBioFeature = () => {
 
             <Button
               onClick={handleAnalyze}
-              disabled={uploadMutation.isPending || analyzeMutation.isPending || !uploadedFile}
+              disabled={
+                uploadMutation.isPending ||
+                analyzeMutation.isPending ||
+                !uploadedFile
+              }
               className="w-full"
               size="lg"
             >
               {uploadMutation.isPending || analyzeMutation.isPending ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  {uploadMutation.isPending ? 'Mengupload...' : 'Menganalisis...'}
+                  {uploadMutation.isPending
+                    ? 'Mengupload...'
+                    : 'Menganalisis...'}
                 </>
               ) : (
                 <>
@@ -334,11 +352,9 @@ export const InstagramBioFeature = () => {
         <Card className="p-6 gradient-card border-border/50 mb-6">
           <div className="flex items-start gap-3 mb-4">
             <Sparkles className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
-            <div>
+            <div className="w-full">
               <h3 className="font-bold text-lg mb-2">Hasil Analisis Awal</h3>
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <ReactMarkdown>{analisisAwal}</ReactMarkdown>
-              </div>
+              <MarkdownRenderer>{analisisAwal}</MarkdownRenderer>
             </div>
           </div>
         </Card>

@@ -15,7 +15,7 @@ import {
   Download,
   CheckCircle2,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { useMutation } from '@tanstack/react-query';
 import { studentDevelopmentApi } from '@/lib/api';
 import { toast } from 'sonner';
@@ -294,9 +294,7 @@ export const IkigaiFeature = () => {
         </Card>
 
         <Card className="p-6 bg-card/50 border-border/50">
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            <ReactMarkdown>{finalResult.analysis}</ReactMarkdown>
-          </div>
+          <MarkdownRenderer>{finalResult.analysis}</MarkdownRenderer>
         </Card>
 
         <Button

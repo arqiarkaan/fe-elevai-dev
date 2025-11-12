@@ -33,7 +33,7 @@ import { useUserStore } from '@/lib/user-store';
 import SpeechRecognition, {
   useSpeechRecognition,
 } from 'react-speech-recognition';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { generatePDF } from '@/lib/pdf-generator';
 
 type Step = 1 | 2 | 3 | 4;
@@ -463,9 +463,7 @@ export const InterviewFeature = () => {
           <h3 className="font-bold text-xl mb-4 text-primary">
             📋 Hasil Evaluasi Interview
           </h3>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            <ReactMarkdown>{evaluation.evaluation}</ReactMarkdown>
-          </div>
+          <MarkdownRenderer>{evaluation.evaluation}</MarkdownRenderer>
         </Card>
 
         {/* Q&A History */}
@@ -542,8 +540,10 @@ export const InterviewFeature = () => {
                 <p className="text-sm font-semibold text-primary mb-2">
                   Interviewer:
                 </p>
-                <div className="text-lg prose prose-sm max-w-none dark:prose-invert">
-                  <ReactMarkdown>{interviewSession.question}</ReactMarkdown>
+                <div className="text-lg">
+                  <MarkdownRenderer>
+                    {interviewSession.question}
+                  </MarkdownRenderer>
                 </div>
               </div>
             </div>

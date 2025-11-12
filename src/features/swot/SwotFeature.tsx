@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { User, ArrowRight, Loader2, ArrowLeft, Download } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { useMutation } from '@tanstack/react-query';
 import { studentDevelopmentApi } from '@/lib/api';
 import { toast } from 'sonner';
@@ -133,9 +133,7 @@ export const SwotFeature = () => {
         </Card>
 
         <Card className="p-6 bg-card/50 border-border/50">
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            <ReactMarkdown>{result.analysis}</ReactMarkdown>
-          </div>
+          <MarkdownRenderer>{result.analysis}</MarkdownRenderer>
         </Card>
 
         <Button

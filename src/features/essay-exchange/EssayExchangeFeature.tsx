@@ -1,29 +1,42 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
-import { Globe, MapPin, BookOpen, Heart, Award, Target, Sparkles, Copy, Loader2 } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
-import { studentDevelopmentApi } from "@/lib/api";
-import { toast } from "sonner";
-import { useUserStore } from "@/lib/user-store";
-import ReactMarkdown from "react-markdown";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card } from '@/components/ui/card';
+import {
+  Globe,
+  MapPin,
+  BookOpen,
+  Heart,
+  Award,
+  Target,
+  Sparkles,
+  Copy,
+  Loader2,
+} from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { studentDevelopmentApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { useUserStore } from '@/lib/user-store';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 
 export const EssayExchangeFeature = () => {
   const [formData, setFormData] = useState({
-    namaProgram: "",
-    negaraUniversitas: "",
-    motivasiAkademik: "",
-    motivasiPribadi: "",
-    skillPengalaman: "",
-    rencanaPasca: ""
+    namaProgram: '',
+    negaraUniversitas: '',
+    motivasiAkademik: '',
+    motivasiPribadi: '',
+    skillPengalaman: '',
+    rencanaPasca: '',
   });
-  const [result, setResult] = useState<{ essay: string; tokens_used?: number } | null>(null);
+  const [result, setResult] = useState<{
+    essay: string;
+    tokens_used?: number;
+  } | null>(null);
   const { refreshProfile } = useUserStore();
 
-  const isValid = Object.values(formData).every(val => val.trim() !== "");
+  const isValid = Object.values(formData).every((val) => val.trim() !== '');
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -42,16 +55,20 @@ export const EssayExchangeFeature = () => {
         refreshProfile();
       }
     },
-    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
-      console.error("Essay Exchange error:", error);
-      if (error.error === "Insufficient tokens") {
+    onError: (error: {
+      error?: string;
+      current_balance?: number;
+      need_to_purchase?: number;
+    }) => {
+      console.error('Essay Exchange error:', error);
+      if (error.error === 'Insufficient tokens') {
         toast.error(
           `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
         );
-      } else if (error.error === "Premium subscription required") {
-        toast.error("Fitur ini memerlukan langganan premium");
+      } else if (error.error === 'Premium subscription required') {
+        toast.error('Fitur ini memerlukan langganan premium');
       } else {
-        toast.error(error.error || "Terjadi kesalahan saat generate esai");
+        toast.error(error.error || 'Terjadi kesalahan saat generate esai');
       }
     },
   });
@@ -59,7 +76,7 @@ export const EssayExchangeFeature = () => {
   const handleCopy = () => {
     if (result?.essay) {
       navigator.clipboard.writeText(result.essay);
-      toast.success("Esai berhasil disalin!");
+      toast.success('Esai berhasil disalin!');
     }
   };
 
@@ -71,8 +88,12 @@ export const EssayExchangeFeature = () => {
     return (
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold mb-2">AI Motivation Letter Assistant</h2>
-          <p className="text-muted-foreground">Hasil motivation letter untuk program impianmu.</p>
+          <h2 className="text-2xl md:text-3xl font-bold mb-2">
+            AI Motivation Letter Assistant
+          </h2>
+          <p className="text-muted-foreground">
+            Hasil motivation letter untuk program impianmu.
+          </p>
         </div>
 
         <Card className="p-6 bg-card/50 border-border/50 relative">
@@ -84,23 +105,23 @@ export const EssayExchangeFeature = () => {
           >
             <Copy className="w-4 h-4" />
           </Button>
-          <div className="prose prose-sm max-w-none dark:prose-invert pr-12">
-            <ReactMarkdown>{result.essay}</ReactMarkdown>
+          <div className="pr-12">
+            <MarkdownRenderer>{result.essay}</MarkdownRenderer>
           </div>
         </Card>
 
-        <Button 
+        <Button
           variant="outline"
-          className="w-full" 
+          className="w-full"
           onClick={() => {
             setResult(null);
             setFormData({
-              namaProgram: "",
-              negaraUniversitas: "",
-              motivasiAkademik: "",
-              motivasiPribadi: "",
-              skillPengalaman: "",
-              rencanaPasca: ""
+              namaProgram: '',
+              negaraUniversitas: '',
+              motivasiAkademik: '',
+              motivasiPribadi: '',
+              skillPengalaman: '',
+              rencanaPasca: '',
             });
           }}
         >
@@ -114,8 +135,13 @@ export const EssayExchangeFeature = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h2 className="text-2xl md:text-3xl font-bold mb-2">AI Motivation Letter Assistant</h2>
-        <p className="text-muted-foreground">Susun draf pertama motivation letter untuk program impianmu dengan bantuan AI yang terstruktur.</p>
+        <h2 className="text-2xl md:text-3xl font-bold mb-2">
+          AI Motivation Letter Assistant
+        </h2>
+        <p className="text-muted-foreground">
+          Susun draf pertama motivation letter untuk program impianmu dengan
+          bantuan AI yang terstruktur.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -124,10 +150,12 @@ export const EssayExchangeFeature = () => {
             <Globe className="w-4 h-4" />
             Nama Program Exchange
           </Label>
-          <Input 
+          <Input
             placeholder="Cth: IISMA"
             value={formData.namaProgram}
-            onChange={(e) => setFormData({...formData, namaProgram: e.target.value})}
+            onChange={(e) =>
+              setFormData({ ...formData, namaProgram: e.target.value })
+            }
           />
         </div>
 
@@ -136,10 +164,12 @@ export const EssayExchangeFeature = () => {
             <MapPin className="w-4 h-4" />
             Negara & Universitas Tujuan
           </Label>
-          <Input 
+          <Input
             placeholder="Cth: USA, University of Pennsylvania"
             value={formData.negaraUniversitas}
-            onChange={(e) => setFormData({...formData, negaraUniversitas: e.target.value})}
+            onChange={(e) =>
+              setFormData({ ...formData, negaraUniversitas: e.target.value })
+            }
           />
         </div>
 
@@ -148,10 +178,12 @@ export const EssayExchangeFeature = () => {
             <BookOpen className="w-4 h-4" />
             Motivasi Akademik
           </Label>
-          <Textarea 
+          <Textarea
             placeholder="Mata kuliah apa yang ingin diambil? Mengapa Relevan?"
             value={formData.motivasiAkademik}
-            onChange={(e) => setFormData({...formData, motivasiAkademik: e.target.value})}
+            onChange={(e) =>
+              setFormData({ ...formData, motivasiAkademik: e.target.value })
+            }
             rows={4}
           />
         </div>
@@ -161,10 +193,12 @@ export const EssayExchangeFeature = () => {
             <Heart className="w-4 h-4" />
             Motivasi Pribadi & Kultural
           </Label>
-          <Textarea 
+          <Textarea
             placeholder="Apa yang kamu pelajari dari budayanya?"
             value={formData.motivasiPribadi}
-            onChange={(e) => setFormData({...formData, motivasiPribadi: e.target.value})}
+            onChange={(e) =>
+              setFormData({ ...formData, motivasiPribadi: e.target.value })
+            }
             rows={4}
           />
         </div>
@@ -174,10 +208,12 @@ export const EssayExchangeFeature = () => {
             <Award className="w-4 h-4" />
             Skill & Pengalaman Relevan
           </Label>
-          <Textarea 
+          <Textarea
             placeholder="Sebutkan 2-3 skill atau pengalaman terkuatmu."
             value={formData.skillPengalaman}
-            onChange={(e) => setFormData({...formData, skillPengalaman: e.target.value})}
+            onChange={(e) =>
+              setFormData({ ...formData, skillPengalaman: e.target.value })
+            }
             rows={4}
           />
         </div>
@@ -187,17 +223,19 @@ export const EssayExchangeFeature = () => {
             <Target className="w-4 h-4" />
             Rencana Kontribusi Pasca-Program
           </Label>
-          <Textarea 
+          <Textarea
             placeholder="Apa rencanamu setelah kembali ke Indonesia?"
             value={formData.rencanaPasca}
-            onChange={(e) => setFormData({...formData, rencanaPasca: e.target.value})}
+            onChange={(e) =>
+              setFormData({ ...formData, rencanaPasca: e.target.value })
+            }
             rows={4}
           />
         </div>
       </div>
 
-      <Button 
-        className="w-full" 
+      <Button
+        className="w-full"
         size="lg"
         disabled={!isValid || generateMutation.isPending}
         onClick={handleGenerate}
