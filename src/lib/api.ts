@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 /**
  * Get authorization header with Supabase JWT token
@@ -134,11 +135,14 @@ export const studentDevelopmentApi = {
     careerRoles: string[];
   }) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/student-development/ikigai/stage1`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/student-development/ikigai/stage1`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -166,11 +170,14 @@ export const studentDevelopmentApi = {
     selectedSliceOfLife: string;
   }) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/student-development/ikigai/final`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/student-development/ikigai/final`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -183,16 +190,16 @@ export const studentDevelopmentApi = {
   /**
    * SWOT Self-Analysis
    */
-  async swotAnalysis(data: {
-    mbtiType: string;
-    viaStrengths: string[];
-  }) {
+  async swotAnalysis(data: { mbtiType: string; viaStrengths: string[] }) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/student-development/swot`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/student-development/swot`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -214,11 +221,14 @@ export const studentDevelopmentApi = {
     rencanKontribusi: string;
   }) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/student-development/essay-exchanges`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/student-development/essay-exchanges`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -237,14 +247,19 @@ export const studentDevelopmentApi = {
     formData.append('cv', file);
 
     // Remove Content-Type header to let browser set it with boundary
-    const headersWithoutContentType: Record<string, string> = { ...headers } as Record<string, string>;
+    const headersWithoutContentType: Record<string, string> = {
+      ...headers,
+    } as Record<string, string>;
     delete headersWithoutContentType['Content-Type'];
 
-    const response = await fetch(`${API_BASE_URL}/api/student-development/interview/upload-cv`, {
-      method: 'POST',
-      headers: headersWithoutContentType,
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/student-development/interview/upload-cv`,
+      {
+        method: 'POST',
+        headers: headersWithoutContentType,
+        body: formData,
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -266,11 +281,14 @@ export const studentDevelopmentApi = {
     posisiMagang?: string;
   }) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/student-development/interview/start`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/student-development/interview/start`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -289,11 +307,14 @@ export const studentDevelopmentApi = {
     answer: string;
   }) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/student-development/interview/answer`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/student-development/interview/answer`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -317,14 +338,19 @@ export const personalBrandingApi = {
     formData.append('image', file);
 
     // Remove Content-Type header to let browser set it with boundary
-    const headersWithoutContentType: Record<string, string> = { ...headers } as Record<string, string>;
+    const headersWithoutContentType: Record<string, string> = {
+      ...headers,
+    } as Record<string, string>;
     delete headersWithoutContentType['Content-Type'];
 
-    const response = await fetch(`${API_BASE_URL}/api/personal-branding/instagram-bio/upload-image`, {
-      method: 'POST',
-      headers: headersWithoutContentType,
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/personal-branding/instagram-bio/upload-image`,
+      {
+        method: 'POST',
+        headers: headersWithoutContentType,
+        body: formData,
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -339,11 +365,14 @@ export const personalBrandingApi = {
    */
   async instagramBioAnalyze(bioContent: string) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/personal-branding/instagram-bio/analyze`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ bioContent }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/personal-branding/instagram-bio/analyze`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ bioContent }),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -368,11 +397,14 @@ export const personalBrandingApi = {
     hashtag?: string;
   }) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/personal-branding/instagram-bio/generate`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/personal-branding/instagram-bio/generate`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -398,11 +430,14 @@ export const personalBrandingApi = {
     skills: string[];
   }) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/personal-branding/linkedin-optimizer`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/personal-branding/linkedin-optimizer`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -428,11 +463,14 @@ export const asistenLombaApi = {
     sertakanMetode?: boolean;
   }) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/asisten-lomba/essay-idea`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/asisten-lomba/essay-idea`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -482,11 +520,14 @@ export const asistenLombaApi = {
     analisisSWOT?: boolean;
   }) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/asisten-lomba/business-plan`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/asisten-lomba/business-plan`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -538,11 +579,14 @@ export const dailyToolsApi = {
    */
   async promptEnhancerTopikBaru(prompt: string) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/daily-tools/prompt-enhancer/topik-baru`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ prompt }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/daily-tools/prompt-enhancer/topik-baru`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt }),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -557,11 +601,14 @@ export const dailyToolsApi = {
    */
   async promptEnhancerTugas(prompt: string) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/daily-tools/prompt-enhancer/tugas`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ prompt }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/daily-tools/prompt-enhancer/tugas`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt }),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -576,11 +623,14 @@ export const dailyToolsApi = {
    */
   async promptEnhancerKonten(prompt: string) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/daily-tools/prompt-enhancer/konten`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ prompt }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/daily-tools/prompt-enhancer/konten`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt }),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -595,11 +645,14 @@ export const dailyToolsApi = {
    */
   async promptEnhancerRencana(prompt: string) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/daily-tools/prompt-enhancer/rencana`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ prompt }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/daily-tools/prompt-enhancer/rencana`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt }),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -614,11 +667,14 @@ export const dailyToolsApi = {
    */
   async promptEnhancerBrainstorming(prompt: string) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/daily-tools/prompt-enhancer/brainstorming`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ prompt }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/daily-tools/prompt-enhancer/brainstorming`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt }),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -633,11 +689,14 @@ export const dailyToolsApi = {
    */
   async promptEnhancerKoding(prompt: string) {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/daily-tools/prompt-enhancer/koding`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ prompt }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/daily-tools/prompt-enhancer/koding`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt }),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();

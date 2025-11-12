@@ -9,6 +9,7 @@ import { useMutation } from '@tanstack/react-query';
 import { studentDevelopmentApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
+import { generatePDF } from '@/lib/pdf-generator';
 
 export const SwotFeature = () => {
   const [step, setStep] = useState(1);
@@ -18,7 +19,10 @@ export const SwotFeature = () => {
     via2: '',
     via3: '',
   });
-  const [result, setResult] = useState<{ analysis: string; tokens_used?: number } | null>(null);
+  const [result, setResult] = useState<{
+    analysis: string;
+    tokens_used?: number;
+  } | null>(null);
   const { profile, refreshProfile } = useUserStore();
 
   const isValid =
@@ -39,7 +43,11 @@ export const SwotFeature = () => {
         refreshProfile();
       }
     },
-    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+    onError: (error: {
+      error?: string;
+      current_balance?: number;
+      need_to_purchase?: number;
+    }) => {
       console.error('SWOT Analysis error:', error);
       if (error.error === 'Insufficient tokens') {
         toast.error(
@@ -58,8 +66,30 @@ export const SwotFeature = () => {
   };
 
   const handleDownloadPDF = () => {
-    // TODO: Implement PDF download
-    toast.info('Fitur download PDF akan segera tersedia');
+    if (!result) {
+      toast.error('Tidak ada hasil untuk didownload');
+      return;
+    }
+
+    try {
+      const doc = generatePDF({
+        title: 'AI SWOT Self-Analysis',
+        subtitle: 'Powered by ElevAI',
+        content: result.analysis,
+        userData: {
+          'MBTI Type': formData.mbti,
+          'VIA Strength #1': formData.via1,
+          'VIA Strength #2': formData.via2,
+          'VIA Strength #3': formData.via3,
+        },
+      });
+
+      doc.save(`SWOT-Analysis-${formData.mbti}-${new Date().getTime()}.pdf`);
+      toast.success('PDF berhasil didownload!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Gagal membuat PDF');
+    }
   };
 
   if (step === 2 && result) {
@@ -76,12 +106,12 @@ export const SwotFeature = () => {
         </div>
 
         {/* Download PDF Button */}
-        <Button 
+        <Button
           onClick={handleDownloadPDF}
           className="flex items-center justify-center gap-2 w-full"
         >
           <Download className="w-4 h-4" />
-          Download PDF
+          Download Laporan PDF
         </Button>
 
         <div className="flex items-center gap-2 text-lg font-semibold">
