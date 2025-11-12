@@ -4,7 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,7 +78,8 @@ const Dashboard = () => {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
-  
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   // Fetch user profile on mount
   useEffect(() => {
     if (user?.id) {
@@ -84,11 +89,13 @@ const Dashboard = () => {
       return unsubscribe;
     }
   }, [user?.id, fetchProfile]);
-  
+
   // Check if user is premium and not expired
-  const isPremium = profile?.is_premium && 
-    (!profile.premium_expires_at || new Date(profile.premium_expires_at) > new Date());
-  
+  const isPremium =
+    profile?.is_premium &&
+    (!profile.premium_expires_at ||
+      new Date(profile.premium_expires_at) > new Date());
+
   const userTokens = profile?.tokens || 0;
 
   // Get user's first name from metadata, fallback to email
@@ -159,6 +166,16 @@ const Dashboard = () => {
     setSelectedFeature(null);
   };
 
+  const handleOpenPremiumModal = () => {
+    setIsSidebarOpen(false); // Close sidebar before opening modal
+    setShowPremiumModal(true);
+  };
+
+  const handleOpenTokenModal = () => {
+    setIsSidebarOpen(false); // Close sidebar before opening modal
+    setShowTokenModal(true);
+  };
+
   const renderFeatures = () => {
     const props = {
       searchQuery,
@@ -196,22 +213,32 @@ const Dashboard = () => {
               {/* Desktop Navigation */}
               <div className="hidden lg:flex items-center gap-3">
                 {!isPremium && (
-                  <Button variant="premium" size="sm" onClick={() => setShowPremiumModal(true)}>
+                  <Button
+                    variant="premium"
+                    size="sm"
+                    onClick={handleOpenPremiumModal}
+                  >
                     <Crown className="w-4 h-4" />
                     Jadi Premium
                   </Button>
                 )}
-                <Button variant="token" size="sm" onClick={() => setShowTokenModal(true)}>
+                <Button
+                  variant="token"
+                  size="sm"
+                  onClick={handleOpenTokenModal}
+                >
                   <Coins className="w-4 h-4" />
                   Beli Token
                 </Button>
                 <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-card border border-border/50">
                   <span className="text-sm font-medium">{username}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded ${
-                    isPremium 
-                      ? 'bg-primary/10 text-primary font-semibold' 
-                      : 'bg-muted text-muted-foreground'
-                  }`}>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded ${
+                      isPremium
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
                     {isPremium ? 'Premium' : 'Basic'}
                   </span>
                   <Tooltip delayDuration={100}>
@@ -235,7 +262,7 @@ const Dashboard = () => {
 
               {/* Mobile Navigation */}
               <div className="lg:hidden flex items-center gap-2">
-                <Sheet>
+                <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
                   <SheetTrigger asChild>
                     <Button variant="ghost" size="icon">
                       <Menu className="w-5 h-5" />
@@ -246,11 +273,13 @@ const Dashboard = () => {
                       <div className="flex flex-col gap-4 px-4 py-4 rounded-lg bg-card border border-border/50">
                         <div className="flex flex-col items-center gap-2 text-center">
                           <span className="text-lg font-bold">{username}</span>
-                          <span className={`text-sm px-3 py-1 rounded-full ${
-                            isPremium 
-                              ? 'bg-primary/10 text-primary font-semibold' 
-                              : 'bg-muted text-muted-foreground'
-                          }`}>
+                          <span
+                            className={`text-sm px-3 py-1 rounded-full ${
+                              isPremium
+                                ? 'bg-primary/10 text-primary font-semibold'
+                                : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
                             {isPremium ? '👑 Premium' : 'Basic'}
                           </span>
                         </div>
@@ -266,7 +295,7 @@ const Dashboard = () => {
                           variant="premium"
                           size="sm"
                           className="w-full justify-start"
-                          onClick={() => setShowPremiumModal(true)}
+                          onClick={handleOpenPremiumModal}
                         >
                           <Crown className="w-4 h-4" />
                           Jadi Premium
@@ -276,7 +305,7 @@ const Dashboard = () => {
                         variant="token"
                         size="sm"
                         className="w-full justify-start"
-                        onClick={() => setShowTokenModal(true)}
+                        onClick={handleOpenTokenModal}
                       >
                         <Coins className="w-4 h-4" />
                         Beli Token
@@ -310,6 +339,13 @@ const Dashboard = () => {
             {renderFeatureContent()}
           </Card>
         </div>
+
+        {/* Payment Modals - Available in feature view */}
+        <PremiumModal
+          open={showPremiumModal}
+          onOpenChange={setShowPremiumModal}
+        />
+        <TokenModal open={showTokenModal} onOpenChange={setShowTokenModal} />
 
         {/* Logout Confirmation Dialog */}
         <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
@@ -347,22 +383,28 @@ const Dashboard = () => {
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-3">
               {!isPremium && (
-                <Button variant="premium" size="sm" onClick={() => setShowPremiumModal(true)}>
+                <Button
+                  variant="premium"
+                  size="sm"
+                  onClick={handleOpenPremiumModal}
+                >
                   <Crown className="w-4 h-4" />
                   Jadi Premium
                 </Button>
               )}
-              <Button variant="token" size="sm" onClick={() => setShowTokenModal(true)}>
+              <Button variant="token" size="sm" onClick={handleOpenTokenModal}>
                 <Coins className="w-4 h-4" />
                 Beli Token
               </Button>
               <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-card border border-border/50">
                 <span className="text-sm font-medium">{username}</span>
-                <span className={`text-xs px-2 py-0.5 rounded ${
-                  isPremium 
-                    ? 'bg-primary/10 text-primary font-semibold' 
-                    : 'bg-muted text-muted-foreground'
-                }`}>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded ${
+                    isPremium
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
                   {isPremium ? 'Premium' : 'Basic'}
                 </span>
                 <Tooltip delayDuration={100}>
@@ -386,7 +428,7 @@ const Dashboard = () => {
 
             {/* Mobile Navigation */}
             <div className="lg:hidden flex items-center gap-2">
-              <Sheet>
+              <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon">
                     <Menu className="w-5 h-5" />
@@ -397,11 +439,13 @@ const Dashboard = () => {
                     <div className="flex flex-col gap-4 px-4 py-4 rounded-lg bg-card border border-border/50">
                       <div className="flex flex-col items-center gap-2 text-center">
                         <span className="text-lg font-bold">{username}</span>
-                        <span className={`text-sm px-3 py-1 rounded-full ${
-                          isPremium 
-                            ? 'bg-primary/10 text-primary font-semibold' 
-                            : 'bg-muted text-muted-foreground'
-                        }`}>
+                        <span
+                          className={`text-sm px-3 py-1 rounded-full ${
+                            isPremium
+                              ? 'bg-primary/10 text-primary font-semibold'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
                           {isPremium ? '👑 Premium' : 'Basic'}
                         </span>
                       </div>
@@ -417,7 +461,7 @@ const Dashboard = () => {
                         variant="premium"
                         size="sm"
                         className="w-full justify-start"
-                        onClick={() => setShowPremiumModal(true)}
+                        onClick={handleOpenPremiumModal}
                       >
                         <Crown className="w-4 h-4" />
                         Jadi Premium
@@ -427,7 +471,7 @@ const Dashboard = () => {
                       variant="token"
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() => setShowTokenModal(true)}
+                      onClick={handleOpenTokenModal}
                     >
                       <Coins className="w-4 h-4" />
                       Beli Token
@@ -502,7 +546,7 @@ const Dashboard = () => {
                 variant="outline"
                 size="lg"
                 className="bg-background text-foreground hover:bg-background/90"
-                onClick={() => setShowPremiumModal(true)}
+                onClick={handleOpenPremiumModal}
               >
                 <Crown className="w-4 h-4" />
                 Upgrade Sekarang
@@ -513,9 +557,12 @@ const Dashboard = () => {
       </div>
 
       {/* Payment Modals */}
-      <PremiumModal open={showPremiumModal} onOpenChange={setShowPremiumModal} />
+      <PremiumModal
+        open={showPremiumModal}
+        onOpenChange={setShowPremiumModal}
+      />
       <TokenModal open={showTokenModal} onOpenChange={setShowTokenModal} />
-      
+
       {/* Logout Confirmation Dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
