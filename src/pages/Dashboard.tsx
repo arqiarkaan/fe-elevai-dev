@@ -31,6 +31,7 @@ import {
   FileCheck,
   ArrowLeft,
   Menu,
+  Bot,
 } from 'lucide-react';
 import { StudentDevelopmentFeatures } from '@/components/dashboard/StudentDevelopmentFeatures';
 import { AsistenLombaFeatures } from '@/components/dashboard/AsistenLombaFeatures';
@@ -206,7 +207,7 @@ const Dashboard = () => {
           <div className="container mx-auto px-4">
             <div className="flex h-16 items-center justify-between">
               <div className="flex items-center gap-2 font-bold text-lg md:text-xl">
-                <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                <Bot className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                 ElevAI
               </div>
 
@@ -376,7 +377,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-2 font-bold text-lg md:text-xl">
-              <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+              <Bot className="w-5 h-5 md:w-6 md:h-6 text-primary" />
               ElevAI
             </div>
 
@@ -494,38 +495,62 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">
+        <div className="mb-12">
+          <h1 className="text-5xl md:text-6xl font-bold mb-4">
             Selamat Datang{username ? `, ${username}` : ''}!
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-lg md:text-xl text-muted-foreground">
             Pilih kategori dan mulai jelajahi fitur dengan AI.
           </p>
         </div>
 
         {/* Category Tabs */}
-        <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
+        <div className="flex gap-4 mb-10 overflow-x-auto pb-2">
           {categories.map((category) => (
             <Button
               key={category.id}
               variant={activeCategory === category.id ? 'default' : 'outline'}
               onClick={() => setActiveCategory(category.id)}
-              className="flex-shrink-0"
+              className="flex-shrink-0 text-base py-6 px-6"
+              size="lg"
             >
-              <category.icon className="w-4 h-4" />
+              <category.icon className="w-5 h-5" />
               {category.label}
             </Button>
           ))}
         </div>
 
         {/* Search */}
-        <div className="mb-8">
-          <Input
-            placeholder="Cari Mode"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-md"
-          />
+        <div className="mb-10">
+          <div className="relative max-w-xl">
+            <Input
+              placeholder="Cari Mode"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="text-base py-6 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Features */}

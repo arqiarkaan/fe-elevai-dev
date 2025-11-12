@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { RegenerateConfirmModal } from './RegenerateConfirmModal';
 import { useUserStore } from '@/lib/user-store';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface GeneratedResultCardProps {
   result: string;
@@ -88,8 +88,20 @@ interface LoadingStateCardProps {
 export const LoadingStateCard = ({
   message = 'ElevAI sedang menggenerate...',
 }: LoadingStateCardProps) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Scroll to the loading card when it appears
+    if (cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, []);
+
   return (
-    <Card className="p-6 bg-card/50 border-border/50 animate-fade-in">
+    <Card
+      ref={cardRef}
+      className="p-6 bg-card/50 border-border/50 animate-fade-in"
+    >
       <div className="flex items-center gap-4">
         <Bot className="w-8 h-8 text-primary flex-shrink-0" />
         <div className="flex-1">

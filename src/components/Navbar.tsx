@@ -1,12 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import {
-  Sparkles,
-  LayoutDashboard,
-  Zap,
-  DollarSign,
-  Users,
-} from 'lucide-react';
+import { Bot, LayoutDashboard, Zap, DollarSign, Users } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth';
 
 export const Navbar = () => {
@@ -18,7 +12,7 @@ export const Navbar = () => {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-            <Sparkles className="w-6 h-6 text-primary" />
+            <Bot className="w-6 h-6 text-primary" />
             ElevAI
           </Link>
 
@@ -58,7 +52,7 @@ export const Navbar = () => {
           ) : (
             <Link to="/login">
               <Button variant="outline" size="sm">
-                <Sparkles className="w-4 h-4" />
+                <Bot className="w-4 h-4" />
                 Login
               </Button>
             </Link>
