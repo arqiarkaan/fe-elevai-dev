@@ -152,7 +152,7 @@ export const IkigaiFeature = () => {
         semester: parseInt(formData.semester),
         universitas: formData.universitas,
         karirSesuaiJurusan:
-          formData.karirSesuai === 'ya' ? 'ya_sesuai' : 'tidak_sesuai',
+          formData.karirSesuai === 'ya' ? 'ya_sesuai' : 'tidak_explore',
         mbtiType: formData.mbti,
         viaStrengths: [formData.via1, formData.via2, formData.via3],
         careerRoles: [formData.career1, formData.career2, formData.career3],
@@ -165,20 +165,52 @@ export const IkigaiFeature = () => {
         refreshProfile();
       }
     },
-    onError: (error: {
-      error?: string;
-      current_balance?: number;
-      need_to_purchase?: number;
-    }) => {
+    onError: (error: unknown) => {
       console.error('Ikigai Stage 1 error:', error);
-      if (error.error === 'Insufficient tokens') {
+      // Handle different error formats
+      const err = error as {
+        response?: { data?: { error?: unknown } };
+        error?: string;
+        message?: string;
+        current_balance?: number;
+        need_to_purchase?: number;
+      };
+
+      let errorMessage = 'Terjadi kesalahan saat menganalisis';
+
+      if (err?.response?.data?.error) {
+        const apiError = err.response.data.error;
+        if (typeof apiError === 'string') {
+          errorMessage = apiError;
+        } else if (
+          apiError &&
+          typeof apiError === 'object' &&
+          'message' in apiError
+        ) {
+          errorMessage = String(apiError.message);
+        }
+      } else if (err?.error) {
+        errorMessage = err.error;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+
+      if (
+        err?.error === 'Insufficient tokens' ||
+        errorMessage.includes('Insufficient tokens')
+      ) {
         toast.error(
-          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
+          `Token anda kurang (${err.current_balance || 0}). Butuh ${
+            err.need_to_purchase || 0
+          } token lagi.`
         );
-      } else if (error.error === 'Premium subscription required') {
+      } else if (
+        err?.error === 'Premium subscription required' ||
+        errorMessage.includes('Premium subscription')
+      ) {
         toast.error('Fitur ini memerlukan langganan premium');
       } else {
-        toast.error(error.error || 'Terjadi kesalahan saat menganalisis');
+        toast.error(errorMessage);
       }
     },
   });
@@ -192,7 +224,7 @@ export const IkigaiFeature = () => {
           semester: parseInt(formData.semester),
           universitas: formData.universitas,
           karirSesuaiJurusan:
-            formData.karirSesuai === 'ya' ? 'ya_sesuai' : 'tidak_sesuai',
+            formData.karirSesuai === 'ya' ? 'ya_sesuai' : 'tidak_explore',
           mbtiType: formData.mbti,
           viaStrengths: [formData.via1, formData.via2, formData.via3],
           careerRoles: [formData.career1, formData.career2, formData.career3],
@@ -208,20 +240,52 @@ export const IkigaiFeature = () => {
         refreshProfile();
       }
     },
-    onError: (error: {
-      error?: string;
-      current_balance?: number;
-      need_to_purchase?: number;
-    }) => {
+    onError: (error: unknown) => {
       console.error('Ikigai Final error:', error);
-      if (error.error === 'Insufficient tokens') {
+      // Handle different error formats
+      const err = error as {
+        response?: { data?: { error?: unknown } };
+        error?: string;
+        message?: string;
+        current_balance?: number;
+        need_to_purchase?: number;
+      };
+
+      let errorMessage = 'Terjadi kesalahan saat menganalisis';
+
+      if (err?.response?.data?.error) {
+        const apiError = err.response.data.error;
+        if (typeof apiError === 'string') {
+          errorMessage = apiError;
+        } else if (
+          apiError &&
+          typeof apiError === 'object' &&
+          'message' in apiError
+        ) {
+          errorMessage = String(apiError.message);
+        }
+      } else if (err?.error) {
+        errorMessage = err.error;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+
+      if (
+        err?.error === 'Insufficient tokens' ||
+        errorMessage.includes('Insufficient tokens')
+      ) {
         toast.error(
-          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
+          `Token anda kurang (${err.current_balance || 0}). Butuh ${
+            err.need_to_purchase || 0
+          } token lagi.`
         );
-      } else if (error.error === 'Premium subscription required') {
+      } else if (
+        err?.error === 'Premium subscription required' ||
+        errorMessage.includes('Premium subscription')
+      ) {
         toast.error('Fitur ini memerlukan langganan premium');
       } else {
-        toast.error(error.error || 'Terjadi kesalahan saat menganalisis');
+        toast.error(errorMessage);
       }
     },
   });
@@ -687,48 +751,65 @@ export const IkigaiFeature = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <Label>Pilih Ikigai Spot</Label>
-              {stage1Data.ikigai_spots.map((spot, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      ikigaiSpot: `${spot.title}: ${spot.description}`,
-                    })
-                  }
-                  className={`w-full p-4 text-left text-sm rounded-md border transition-smooth ${
-                    formData.ikigaiSpot.includes(spot.title)
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border bg-card hover:border-primary/50'
-                  }`}
-                >
-                  <strong>{spot.title}:</strong> {spot.description}
-                </button>
-              ))}
+              {stage1Data.ikigai_spots && stage1Data.ikigai_spots.length > 0 ? (
+                stage1Data.ikigai_spots.map((spot, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        ikigaiSpot: `${spot.title || ''}: ${
+                          spot.description || ''
+                        }`,
+                      })
+                    }
+                    className={`w-full p-4 text-left text-sm rounded-md border transition-smooth ${
+                      formData.ikigaiSpot.includes(spot.title || '')
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border bg-card hover:border-primary/50'
+                    }`}
+                  >
+                    <strong>{spot.title || `Option ${idx + 1}`}:</strong>{' '}
+                    {spot.description || 'No description available'}
+                  </button>
+                ))
+              ) : (
+                <div className="text-sm text-muted-foreground p-4 border border-border rounded-md">
+                  Tidak ada data ikigai spots tersedia. Silakan coba lagi.
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">
               <Label>Pilih Slice of Life Purpose</Label>
-              {stage1Data.life_purposes.map((purpose, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      sliceOfLife: purpose.slice_of_life_purpose,
-                    })
-                  }
-                  className={`w-full p-4 text-left text-sm rounded-md border transition-smooth ${
-                    formData.sliceOfLife === purpose.slice_of_life_purpose
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border bg-card hover:border-primary/50'
-                  }`}
-                >
-                  {purpose.slice_of_life_purpose}
-                </button>
-              ))}
+              {stage1Data.life_purposes &&
+              stage1Data.life_purposes.length > 0 ? (
+                stage1Data.life_purposes.map((purpose, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        sliceOfLife: purpose.slice_of_life_purpose || '',
+                      })
+                    }
+                    className={`w-full p-4 text-left text-sm rounded-md border transition-smooth ${
+                      formData.sliceOfLife ===
+                      (purpose.slice_of_life_purpose || '')
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border bg-card hover:border-primary/50'
+                    }`}
+                  >
+                    {purpose.slice_of_life_purpose || `Option ${idx + 1}`}
+                  </button>
+                ))
+              ) : (
+                <div className="text-sm text-muted-foreground p-4 border border-border rounded-md">
+                  Tidak ada data life purposes tersedia. Silakan coba lagi.
+                </div>
+              )}
             </div>
           </div>
 
