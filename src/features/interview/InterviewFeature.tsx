@@ -54,7 +54,6 @@ interface InterviewEvaluation {
     answer: string;
   }>;
   evaluation: string;
-  evaluation_audio: string;
   tokens_used: number;
 }
 
@@ -337,10 +336,6 @@ export const InterviewFeature = () => {
             step: 4,
           });
           refreshProfile();
-          // Auto-play evaluation audio
-          setTimeout(() => {
-            playAudio(evaluationData.evaluation_audio);
-          }, 500);
         } else {
           // Next question - preserve session_id from previous state
           const nextQuestion = data.data as InterviewSession;
