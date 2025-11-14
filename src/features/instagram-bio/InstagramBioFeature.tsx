@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +25,8 @@ import { useMutation } from '@tanstack/react-query';
 import { personalBrandingApi } from '@/lib/api';
 import { useUserStore } from '@/lib/user-store';
 
+import { useStepFeatureState } from '@/hooks/useFeatureState';
+
 type Step = 1 | 2 | 3;
 
 interface FormData {
@@ -41,27 +42,80 @@ interface FormData {
   hashtag: string;
 }
 
+interface InstagramBioState {
+  step: Step;
+  uploadedImage: string | null;
+  uploadedFile: File | null;
+  bioContent: string;
+  analisisAwal: string;
+  generatedBios: string[];
+  formData: FormData;
+}
+
 export const InstagramBioFeature = () => {
-  const [step, setStep] = useState<Step>(1);
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [bioContent, setBioContent] = useState<string>('');
-  const [analisisAwal, setAnalisisAwal] = useState<string>('');
-  const [generatedBios, setGeneratedBios] = useState<string[]>([]);
+  // Step validation function
+  const validateStep = (step: number, state: InstagramBioState): boolean => {
+    switch (step) {
+      case 1:
+        return true; // Step 1 always accessible
+      case 2:
+        // Step 2 requires bioContent and analisisAwal (uploaded & analyzed)
+        return !!(state.bioContent && state.analisisAwal);
+      case 3:
+        // Step 3 requires generatedBios (generation completed)
+        return state.generatedBios.length > 0;
+      default:
+        return false;
+    }
+  };
+
+  const [state, setState, setStep] = useStepFeatureState<InstagramBioState>(
+    {
+      step: 1,
+      uploadedImage: null,
+      uploadedFile: null,
+      bioContent: '',
+      analisisAwal: '',
+      generatedBios: [],
+      formData: {
+        tujuanUtama: '',
+        tujuanLainnya: '',
+        gayaTulisan: '',
+        gayaLainnya: '',
+        siapa: '',
+        targetAudiens: '',
+        pencapaian: [''],
+        cta: '',
+        punyaHashtag: '',
+        hashtag: '',
+      },
+    },
+    'instagram-bio',
+    validateStep
+  );
   const { refreshProfile } = useUserStore();
 
-  const [formData, setFormData] = useState<FormData>({
-    tujuanUtama: '',
-    tujuanLainnya: '',
-    gayaTulisan: '',
-    gayaLainnya: '',
-    siapa: '',
-    targetAudiens: '',
-    pencapaian: [''],
-    cta: '',
-    punyaHashtag: '',
-    hashtag: '',
-  });
+  const {
+    step,
+    uploadedImage,
+    uploadedFile,
+    bioContent,
+    analisisAwal,
+    generatedBios,
+    formData,
+  } = state;
+  const setUploadedImage = (data: string | null) =>
+    setState({ ...state, uploadedImage: data });
+  const setUploadedFile = (data: File | null) =>
+    setState({ ...state, uploadedFile: data });
+  const setBioContent = (data: string) =>
+    setState({ ...state, bioContent: data });
+  const setAnalisisAwal = (data: string) =>
+    setState({ ...state, analisisAwal: data });
+  const setGeneratedBios = (data: string[]) =>
+    setState({ ...state, generatedBios: data });
+  const setFormData = (data: FormData) =>
+    setState({ ...state, formData: data });
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {

@@ -35,6 +35,7 @@ import SpeechRecognition, {
 } from 'react-speech-recognition';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { generatePDF } from '@/lib/pdf-generator';
+import { useStepFeatureState } from '@/hooks/useFeatureState';
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -57,29 +58,68 @@ interface InterviewEvaluation {
   tokens_used: number;
 }
 
+interface InterviewState {
+  step: Step;
+  formData: {
+    nama: string;
+    cvFile: File | null;
+    cvContent: string;
+    jenisInterview: '' | 'beasiswa' | 'magang';
+    bahasa: string;
+    namaBeasiswa: string;
+    posisiMagang: string;
+  };
+  interviewSession: InterviewSession | null;
+  currentAnswer: string;
+  evaluation: InterviewEvaluation | null;
+}
+
 export const InterviewFeature = () => {
-  const [step, setStep] = useState<Step>(1);
-  const [formData, setFormData] = useState({
-    nama: '',
-    cvFile: null as File | null,
-    cvContent: '',
-    jenisInterview: '' as '' | 'beasiswa' | 'magang',
-    bahasa: '',
-    namaBeasiswa: '',
-    posisiMagang: '',
-  });
+  // Step validation function
+  const validateStep = (step: number, state: InterviewState): boolean => {
+    switch (step) {
+      case 1:
+        return true; // Step 1 always accessible
+      case 2:
+        // Step 2 requires nama from step 1
+        return !!state.formData.nama;
+      case 3:
+        // Step 3 requires interview session (started interview)
+        return !!state.interviewSession;
+      case 4:
+        // Step 4 requires evaluation (completed interview)
+        return !!state.evaluation;
+      default:
+        return false;
+    }
+  };
 
-  const [interviewSession, setInterviewSession] =
-    useState<InterviewSession | null>(null);
-  const [currentAnswer, setCurrentAnswer] = useState('');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [evaluation, setEvaluation] = useState<InterviewEvaluation | null>(
-    null
+  const [state, setState, setStep] = useStepFeatureState<InterviewState>(
+    {
+      step: 1,
+      formData: {
+        nama: '',
+        cvFile: null,
+        cvContent: '',
+        jenisInterview: '',
+        bahasa: '',
+        namaBeasiswa: '',
+        posisiMagang: '',
+      },
+      interviewSession: null,
+      currentAnswer: '',
+      evaluation: null,
+    },
+    'interview-simulation',
+    validateStep
   );
-  const [speechError, setSpeechError] = useState<string>('');
 
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speechError, setSpeechError] = useState<string>('');
   const audioRef = useRef<HTMLAudioElement>(null);
   const { refreshProfile } = useUserStore();
+
+  const { step, formData, interviewSession, currentAnswer, evaluation } = state;
 
   const {
     transcript,
@@ -92,8 +132,9 @@ export const InterviewFeature = () => {
 
   useEffect(() => {
     if (transcript) {
-      setCurrentAnswer(transcript);
+      setState({ ...state, currentAnswer: transcript });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript]);
 
   // Setup speech recognition error handlers
@@ -216,7 +257,10 @@ export const InterviewFeature = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
-        setFormData({ ...formData, cvContent: data.data.cv_text });
+        setState({
+          ...state,
+          formData: { ...formData, cvContent: data.data.cv_text },
+        });
         toast.success('CV berhasil diupload dan diekstrak');
       }
     },
@@ -257,8 +301,7 @@ export const InterviewFeature = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
-        setInterviewSession(data.data);
-        setStep(3);
+        setState({ ...state, interviewSession: data.data, step: 3 });
         // Auto-play first question
         setTimeout(() => {
           playAudio(data.data.question_audio);
@@ -287,21 +330,29 @@ export const InterviewFeature = () => {
       if (data.success) {
         if (data.data.completed) {
           // Interview completed
-          setEvaluation(data.data as InterviewEvaluation);
-          setStep(4);
+          const evaluationData = data.data as InterviewEvaluation;
+          setState({
+            ...state,
+            evaluation: evaluationData,
+            step: 4,
+          });
           refreshProfile();
           // Auto-play evaluation audio
           setTimeout(() => {
-            playAudio((data.data as InterviewEvaluation).evaluation_audio);
+            playAudio(evaluationData.evaluation_audio);
           }, 500);
         } else {
           // Next question - preserve session_id from previous state
           const nextQuestion = data.data as InterviewSession;
-          setInterviewSession({
+          const updatedSession = {
             ...nextQuestion,
             session_id: interviewSession?.session_id || nextQuestion.session_id,
+          };
+          setState({
+            ...state,
+            interviewSession: updatedSession,
+            currentAnswer: '',
           });
-          setCurrentAnswer('');
           resetTranscript();
           // Auto-play next question
           setTimeout(() => {
@@ -355,7 +406,7 @@ export const InterviewFeature = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.type === 'application/pdf') {
-        setFormData({ ...formData, cvFile: file });
+        setState({ ...state, formData: { ...formData, cvFile: file } });
         uploadCVMutation.mutate(file);
       } else {
         toast.error('Harap upload file PDF');
@@ -415,19 +466,21 @@ export const InterviewFeature = () => {
   };
 
   const handleRestartInterview = () => {
-    setStep(1);
-    setFormData({
-      nama: '',
-      cvFile: null,
-      cvContent: '',
-      jenisInterview: '',
-      bahasa: '',
-      namaBeasiswa: '',
-      posisiMagang: '',
+    setState({
+      step: 1,
+      formData: {
+        nama: '',
+        cvFile: null,
+        cvContent: '',
+        jenisInterview: '',
+        bahasa: '',
+        namaBeasiswa: '',
+        posisiMagang: '',
+      },
+      interviewSession: null,
+      currentAnswer: '',
+      evaluation: null,
     });
-    setInterviewSession(null);
-    setCurrentAnswer('');
-    setEvaluation(null);
     resetTranscript();
   };
 
@@ -670,7 +723,7 @@ export const InterviewFeature = () => {
             value={currentAnswer}
             onChange={(e) => {
               if (!listening && !isPlaying) {
-                setCurrentAnswer(e.target.value);
+                setState({ ...state, currentAnswer: e.target.value });
               }
             }}
             placeholder={
@@ -697,7 +750,7 @@ export const InterviewFeature = () => {
             <Button
               variant="outline"
               onClick={() => {
-                setCurrentAnswer('');
+                setState({ ...state, currentAnswer: '' });
                 resetTranscript();
               }}
               disabled={listening || isPlaying}
@@ -756,7 +809,12 @@ export const InterviewFeature = () => {
           <Input
             placeholder="Contoh: Budi"
             value={formData.nama}
-            onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+            onChange={(e) =>
+              setState({
+                ...state,
+                formData: { ...formData, nama: e.target.value },
+              })
+            }
             className="text-lg"
           />
 
@@ -840,10 +898,13 @@ export const InterviewFeature = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    setFormData({
-                      ...formData,
-                      jenisInterview: 'beasiswa',
-                      posisiMagang: '',
+                    setState({
+                      ...state,
+                      formData: {
+                        ...formData,
+                        jenisInterview: 'beasiswa',
+                        posisiMagang: '',
+                      },
                     })
                   }
                   className={`py-3 px-4 transition-smooth ${
@@ -857,11 +918,14 @@ export const InterviewFeature = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    setFormData({
-                      ...formData,
-                      jenisInterview: 'magang',
-                      bahasa: '',
-                      namaBeasiswa: '',
+                    setState({
+                      ...state,
+                      formData: {
+                        ...formData,
+                        jenisInterview: 'magang',
+                        bahasa: '',
+                        namaBeasiswa: '',
+                      },
                     })
                   }
                   className={`py-3 px-4 border-l border-border transition-smooth ${
@@ -885,7 +949,10 @@ export const InterviewFeature = () => {
                   <Select
                     value={formData.bahasa}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, bahasa: value })
+                      setState({
+                        ...state,
+                        formData: { ...formData, bahasa: value },
+                      })
                     }
                   >
                     <SelectTrigger>
@@ -904,7 +971,10 @@ export const InterviewFeature = () => {
                     placeholder="Masukkan nama beasiswa"
                     value={formData.namaBeasiswa}
                     onChange={(e) =>
-                      setFormData({ ...formData, namaBeasiswa: e.target.value })
+                      setState({
+                        ...state,
+                        formData: { ...formData, namaBeasiswa: e.target.value },
+                      })
                     }
                   />
                 </div>
@@ -918,7 +988,10 @@ export const InterviewFeature = () => {
                   placeholder="Contoh: Software Engineer Intern at Google"
                   value={formData.posisiMagang}
                   onChange={(e) =>
-                    setFormData({ ...formData, posisiMagang: e.target.value })
+                    setState({
+                      ...state,
+                      formData: { ...formData, posisiMagang: e.target.value },
+                    })
                   }
                 />
               </div>

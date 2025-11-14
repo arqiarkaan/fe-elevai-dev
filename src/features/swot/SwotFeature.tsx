@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,20 +9,61 @@ import { studentDevelopmentApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
 import { generatePDF } from '@/lib/pdf-generator';
+import { useStepFeatureState } from '@/hooks/useFeatureState';
 
-export const SwotFeature = () => {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    mbti: '',
-    via1: '',
-    via2: '',
-    via3: '',
-  });
-  const [result, setResult] = useState<{
+interface SwotState {
+  step: number;
+  formData: {
+    mbti: string;
+    via1: string;
+    via2: string;
+    via3: string;
+  };
+  result: {
     analysis: string;
     tokens_used?: number;
-  } | null>(null);
+  } | null;
+}
+
+export const SwotFeature = () => {
+  // Step validation function
+  const validateStep = (step: number, state: SwotState): boolean => {
+    switch (step) {
+      case 1:
+        return true; // Step 1 always accessible
+      case 2:
+        // Step 2 requires result (analysis completed)
+        return !!state.result;
+      default:
+        return false;
+    }
+  };
+
+  const [state, setState, setStep] = useStepFeatureState<SwotState>(
+    {
+      step: 1,
+      formData: {
+        mbti: '',
+        via1: '',
+        via2: '',
+        via3: '',
+      },
+      result: null,
+    },
+    'swot',
+    validateStep
+  );
   const { profile, refreshProfile } = useUserStore();
+
+  const { step, formData, result } = state;
+  const setFormData = (data: {
+    mbti: string;
+    via1: string;
+    via2: string;
+    via3: string;
+  }) => setState({ ...state, formData: data });
+  const setResult = (data: { analysis: string; tokens_used?: number } | null) =>
+    setState({ ...state, result: data });
 
   const isValid =
     formData.mbti && formData.via1 && formData.via2 && formData.via3;

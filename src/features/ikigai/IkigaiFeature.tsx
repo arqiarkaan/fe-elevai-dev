@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,30 +45,88 @@ interface Stage1Response {
   life_purposes: Array<{ slice_of_life_purpose: string }>;
 }
 
-export const IkigaiFeature = () => {
-  const [step, setStep] = useState<Step>(1);
-  const [formData, setFormData] = useState<FormData>({
-    nama: '',
-    jurusan: '',
-    semester: '',
-    universitas: '',
-    karirSesuai: '',
-    mbti: '',
-    via1: '',
-    via2: '',
-    via3: '',
-    career1: '',
-    career2: '',
-    career3: '',
-    ikigaiSpot: '',
-    sliceOfLife: '',
-  });
-  const [stage1Data, setStage1Data] = useState<Stage1Response | null>(null);
-  const [finalResult, setFinalResult] = useState<{
+import { useStepFeatureState } from '@/hooks/useFeatureState';
+
+interface IkigaiState {
+  step: Step;
+  formData: FormData;
+  stage1Data: Stage1Response | null;
+  finalResult: {
     analysis: string;
     stage1_data: unknown;
-  } | null>(null);
+  } | null;
+}
+
+export const IkigaiFeature = () => {
+  // Step validation function
+  const validateStep = (step: number, state: IkigaiState): boolean => {
+    switch (step) {
+      case 1:
+        return true; // Step 1 always accessible
+      case 2:
+        // Step 2 requires basic info from step 1
+        return !!(
+          state.formData.nama &&
+          state.formData.jurusan &&
+          state.formData.semester &&
+          state.formData.universitas &&
+          state.formData.karirSesuai
+        );
+      case 3:
+        // Step 3 requires step 1 data (same as step 2)
+        return !!(
+          state.formData.nama &&
+          state.formData.jurusan &&
+          state.formData.semester &&
+          state.formData.universitas &&
+          state.formData.karirSesuai
+        );
+      case 4:
+        // Step 4 requires stage1Data (analysis completed)
+        return !!state.stage1Data;
+      case 5:
+        // Step 5 requires finalResult
+        return !!state.finalResult;
+      default:
+        return false;
+    }
+  };
+
+  const [state, setState, setStep] = useStepFeatureState<IkigaiState>(
+    {
+      step: 1,
+      formData: {
+        nama: '',
+        jurusan: '',
+        semester: '',
+        universitas: '',
+        karirSesuai: '',
+        mbti: '',
+        via1: '',
+        via2: '',
+        via3: '',
+        career1: '',
+        career2: '',
+        career3: '',
+        ikigaiSpot: '',
+        sliceOfLife: '',
+      },
+      stage1Data: null,
+      finalResult: null,
+    },
+    'ikigai',
+    validateStep
+  );
   const { refreshProfile } = useUserStore();
+
+  const { step, formData, stage1Data, finalResult } = state;
+  const setFormData = (data: FormData) =>
+    setState({ ...state, formData: data });
+  const setStage1Data = (data: Stage1Response | null) =>
+    setState({ ...state, stage1Data: data });
+  const setFinalResult = (
+    data: { analysis: string; stage1_data: unknown } | null
+  ) => setState({ ...state, finalResult: data });
 
   const isStep1Valid =
     formData.nama &&

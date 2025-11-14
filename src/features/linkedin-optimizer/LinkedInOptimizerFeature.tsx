@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +17,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
+import { useStepFeatureState } from '@/hooks/useFeatureState';
+
 type Step = 1 | 2 | 3 | 4 | 5;
 
 interface FormData {
@@ -33,22 +34,79 @@ interface FormData {
   skills: string[];
 }
 
+interface LinkedInState {
+  step: Step;
+  formData: FormData;
+  generatedResult: string | null;
+}
+
 export const LinkedInOptimizerFeature = () => {
-  const [step, setStep] = useState<Step>(1);
+  // Step validation function
+  const validateStep = (step: number, state: LinkedInState): boolean => {
+    switch (step) {
+      case 1:
+        return true; // Step 1 always accessible
+      case 2:
+        // Step 2 requires targetOptimasi selected
+        return !!state.formData.targetOptimasi;
+      case 3:
+        // Step 3 requires basic info from step 2
+        return !!(
+          state.formData.targetOptimasi &&
+          state.formData.namaLengkap &&
+          state.formData.jurusan &&
+          state.formData.semester &&
+          state.formData.targetKarir
+        );
+      case 4:
+        // Step 4 requires professional identity from step 3
+        const words = state.formData.identitasProfesional
+          .trim()
+          .split(/\s+/)
+          .filter((w) => w.length > 0);
+        return !!(
+          state.formData.targetOptimasi &&
+          state.formData.namaLengkap &&
+          state.formData.tujuanUtama &&
+          state.formData.targetRole &&
+          words.length >= 4 &&
+          words.length <= 7
+        );
+      case 5:
+        // Step 5 requires generatedResult
+        return !!state.generatedResult;
+      default:
+        return false;
+    }
+  };
+
+  const [state, setState, setStep] = useStepFeatureState<LinkedInState>(
+    {
+      step: 1,
+      formData: {
+        targetOptimasi: '',
+        namaLengkap: '',
+        jurusan: '',
+        semester: '',
+        targetKarir: '',
+        tujuanUtama: '',
+        targetRole: '',
+        identitasProfesional: '',
+        pencapaian: [''],
+        skills: [''],
+      },
+      generatedResult: null,
+    },
+    'linkedin-optimizer',
+    validateStep
+  );
   const { refreshProfile } = useUserStore();
-  const [generatedResult, setGeneratedResult] = useState<string | null>(null);
-  const [formData, setFormData] = useState<FormData>({
-    targetOptimasi: '',
-    namaLengkap: '',
-    jurusan: '',
-    semester: '',
-    targetKarir: '',
-    tujuanUtama: '',
-    targetRole: '',
-    identitasProfesional: '',
-    pencapaian: [''],
-    skills: [''],
-  });
+
+  const { step, formData, generatedResult } = state;
+  const setFormData = (data: FormData) =>
+    setState({ ...state, formData: data });
+  const setGeneratedResult = (data: string | null) =>
+    setState({ ...state, generatedResult: data });
 
   const addItem = (field: 'pencapaian' | 'skills') => {
     if (formData[field].length < 3) {
@@ -148,12 +206,16 @@ export const LinkedInOptimizerFeature = () => {
         namaLengkap: formData.namaLengkap,
         jurusan: formData.jurusan,
         semester: parseInt(formData.semester),
-        targetKarir: formData.targetKarir === 'sesuai' ? 'sesuai_jurusan' : 'eksplorasi',
-        tujuanUtama: formData.tujuanUtama === 'karir' ? 'mencari_karir' : 'personal_branding',
+        targetKarir:
+          formData.targetKarir === 'sesuai' ? 'sesuai_jurusan' : 'eksplorasi',
+        tujuanUtama:
+          formData.tujuanUtama === 'karir'
+            ? 'mencari_karir'
+            : 'personal_branding',
         targetRole: formData.targetRole,
         identitasProfesional: formData.identitasProfesional,
-        pencapaian: formData.pencapaian.filter(p => p.trim() !== ''),
-        skills: formData.skills.filter(s => s.trim() !== ''),
+        pencapaian: formData.pencapaian.filter((p) => p.trim() !== ''),
+        skills: formData.skills.filter((s) => s.trim() !== ''),
       });
     },
     onSuccess: (data) => {
@@ -163,7 +225,11 @@ export const LinkedInOptimizerFeature = () => {
         refreshProfile();
       }
     },
-    onError: (error: { error?: string; current_balance?: number; need_to_purchase?: number }) => {
+    onError: (error: {
+      error?: string;
+      current_balance?: number;
+      need_to_purchase?: number;
+    }) => {
       console.error('LinkedIn Optimizer error:', error);
       if (error.error === 'Insufficient tokens') {
         toast.error(
@@ -220,23 +286,24 @@ export const LinkedInOptimizerFeature = () => {
     </div>
   );
 
-  const displayResult = generatedResult || (
-    formData.targetOptimasi === 'headline'
+  const displayResult =
+    generatedResult ||
+    (formData.targetOptimasi === 'headline'
       ? `${formData.namaLengkap} | ${formData.identitasProfesional} | ${formData.targetRole} Enthusiast | ${formData.jurusan}`
-      : `Saya ${formData.namaLengkap}, mahasiswa ${
-      formData.jurusan
-    } semester ${formData.semester} yang passionate di bidang ${
-      formData.targetRole
-    }. Sebagai ${formData.identitasProfesional.toLowerCase()}, saya memiliki fokus kuat pada pengembangan keterampilan teknis dan soft skills yang relevan dengan industri.
+      : `Saya ${formData.namaLengkap}, mahasiswa ${formData.jurusan} semester ${
+          formData.semester
+        } yang passionate di bidang ${
+          formData.targetRole
+        }. Sebagai ${formData.identitasProfesional.toLowerCase()}, saya memiliki fokus kuat pada pengembangan keterampilan teknis dan soft skills yang relevan dengan industri.
 
 🎯 Tujuan Profesional
 Saya bercita-cita untuk ${
-      formData.tujuanUtama === 'karir'
-        ? 'membangun karir yang solid'
-        : 'mengembangkan personal branding yang kuat'
-    } di bidang ${
-      formData.targetRole
-    }. Dengan kombinasi latar belakang akademis dan pengalaman praktis, saya siap berkontribusi pada proyek-proyek inovatif.
+          formData.tujuanUtama === 'karir'
+            ? 'membangun karir yang solid'
+            : 'mengembangkan personal branding yang kuat'
+        } di bidang ${
+          formData.targetRole
+        }. Dengan kombinasi latar belakang akademis dan pengalaman praktis, saya siap berkontribusi pada proyek-proyek inovatif.
 
 🏆 Pencapaian & Pengalaman
 ${formData.pencapaian
@@ -253,10 +320,9 @@ ${formData.skills
 Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan profesional di industri. Mari terhubung dan berkembang bersama!
 
 #${formData.targetRole.replace(/\s+/g, '')} #${formData.jurusan.replace(
-      /\s+/g,
-      ''
-    )} #ProfessionalDevelopment`
-  );
+          /\s+/g,
+          ''
+        )} #ProfessionalDevelopment`);
 
   if (step === 5) {
     return (
@@ -301,9 +367,7 @@ Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan p
             </h4>
             <div className="prose prose-sm max-w-none">
               {formData.targetOptimasi === 'headline' ? (
-                <p className="text-lg font-medium">
-                  {displayResult}
-                </p>
+                <p className="text-lg font-medium">{displayResult}</p>
               ) : (
                 <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed">
                   {displayResult}

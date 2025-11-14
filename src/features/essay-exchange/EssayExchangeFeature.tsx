@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useFeatureState } from '@/hooks/useFeatureState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,20 +21,43 @@ import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 
-export const EssayExchangeFeature = () => {
-  const [formData, setFormData] = useState({
-    namaProgram: '',
-    negaraUniversitas: '',
-    motivasiAkademik: '',
-    motivasiPribadi: '',
-    skillPengalaman: '',
-    rencanaPasca: '',
-  });
-  const [result, setResult] = useState<{
+interface EssayExchangeState {
+  formData: {
+    namaProgram: string;
+    negaraUniversitas: string;
+    motivasiAkademik: string;
+    motivasiPribadi: string;
+    skillPengalaman: string;
+    rencanaPasca: string;
+  };
+  result: {
     essay: string;
     tokens_used?: number;
-  } | null>(null);
+  } | null;
+}
+
+export const EssayExchangeFeature = () => {
+  const [state, setState] = useFeatureState<EssayExchangeState>(
+    {
+      formData: {
+        namaProgram: '',
+        negaraUniversitas: '',
+        motivasiAkademik: '',
+        motivasiPribadi: '',
+        skillPengalaman: '',
+        rencanaPasca: '',
+      },
+      result: null,
+    },
+    'essay-exchange'
+  );
   const { refreshProfile } = useUserStore();
+
+  const { formData, result } = state;
+  const setFormData = (data: EssayExchangeState['formData']) =>
+    setState({ ...state, formData: data });
+  const setResult = (data: { essay: string; tokens_used?: number } | null) =>
+    setState({ ...state, result: data });
 
   const isValid = Object.values(formData).every((val) => val.trim() !== '');
 
