@@ -1,12 +1,30 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth';
+import { useUserStore, subscribeToProfileChanges } from '@/lib/user-store';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user, loading } = useAuthStore();
+  const { fetchProfile, hydrated } = useUserStore();
+
+  // Prefetch user profile when user is authenticated
+  useEffect(() => {
+    if (user?.id && !hydrated) {
+      fetchProfile(user.id);
+    }
+  }, [user?.id, hydrated, fetchProfile]);
+
+  // Subscribe to profile changes
+  useEffect(() => {
+    if (user?.id) {
+      const unsubscribe = subscribeToProfileChanges(user.id);
+      return unsubscribe;
+    }
+  }, [user?.id]);
 
   // Show nothing while checking auth status
   if (loading) {

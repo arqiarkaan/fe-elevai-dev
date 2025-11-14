@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -36,7 +36,7 @@ import { PersonalBrandingFeatures } from '@/components/dashboard/PersonalBrandin
 import { DailyToolsFeatures } from '@/components/dashboard/DailyToolsFeatures';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/lib/auth';
-import { useUserStore, subscribeToProfileChanges } from '@/lib/user-store';
+import { useUserStore } from '@/lib/user-store';
 import { PremiumModal } from '@/components/payment/PremiumModal';
 import { TokenModal } from '@/components/payment/TokenModal';
 
@@ -57,23 +57,13 @@ const categories = [
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuthStore();
-  const { profile, fetchProfile } = useUserStore();
+  const { profile } = useUserStore();
   const [activeCategory, setActiveCategory] = useState<Category>('student');
   const [searchQuery, setSearchQuery] = useState('');
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  // Fetch user profile on mount
-  useEffect(() => {
-    if (user?.id) {
-      fetchProfile(user.id);
-      // Subscribe to real-time profile changes
-      const unsubscribe = subscribeToProfileChanges(user.id);
-      return unsubscribe;
-    }
-  }, [user?.id, fetchProfile]);
 
   // Check if user is premium and not expired
   const isPremium =
