@@ -24,6 +24,7 @@ import {
 import { useMutation } from '@tanstack/react-query';
 import { personalBrandingApi } from '@/lib/api';
 import { useUserStore } from '@/lib/user-store';
+import { useState } from 'react';
 
 import { useStepFeatureState } from '@/hooks/useFeatureState';
 
@@ -45,7 +46,6 @@ interface FormData {
 interface InstagramBioState {
   step: Step;
   uploadedImage: string | null;
-  uploadedFile: File | null;
   bioContent: string;
   analisisAwal: string;
   generatedBios: string[];
@@ -73,7 +73,6 @@ export const InstagramBioFeature = () => {
     {
       step: 1,
       uploadedImage: null,
-      uploadedFile: null,
       bioContent: '',
       analisisAwal: '',
       generatedBios: [],
@@ -95,10 +94,12 @@ export const InstagramBioFeature = () => {
   );
   const { refreshProfile } = useUserStore();
 
+  // Use local state for File object (cannot be serialized to localStorage)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
   const {
     step,
     uploadedImage,
-    uploadedFile,
     bioContent,
     analisisAwal,
     generatedBios,
@@ -106,8 +107,6 @@ export const InstagramBioFeature = () => {
   } = state;
   const setUploadedImage = (data: string | null) =>
     setState({ ...state, uploadedImage: data });
-  const setUploadedFile = (data: File | null) =>
-    setState({ ...state, uploadedFile: data });
   const setBioContent = (data: string) =>
     setState({ ...state, bioContent: data });
   const setAnalisisAwal = (data: string) =>
@@ -196,12 +195,15 @@ export const InstagramBioFeature = () => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
+      // Set the file first
+      setUploadedFile(file);
+
+      // Then read and display the image
       const reader = new FileReader();
       reader.onloadend = () => {
         setUploadedImage(reader.result as string);
       };
       reader.readAsDataURL(file);
-      setUploadedFile(file);
     } else {
       toast.error('Harap pilih file gambar yang valid');
     }
