@@ -182,6 +182,9 @@ export const SwotFeature = () => {
           variant="outline"
           className="w-full"
           onClick={() => {
+            // Clear session storage first
+            sessionStorage.removeItem('feature_state_swot');
+            // Then reset state completely
             setState({
               step: 1,
               formData: { mbti: '', via1: '', via2: '', via3: '' },

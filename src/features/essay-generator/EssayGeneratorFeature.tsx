@@ -89,8 +89,10 @@ export const EssayGeneratorFeature = () => {
     lastFormData,
   } = state;
 
-  const setTemaUtama = (value: '' | 'soshum' | 'saintek') =>
+  const setTemaUtama = (value: '' | 'soshum' | 'saintek') => {
+    // Reset subTema when temaUtama changes
     setState({ ...state, temaUtama: value, subTema: '' });
+  };
   const setSubTema = (value: string) => setState({ ...state, subTema: value });
   const setLatarBelakang = (value: string) =>
     setState({ ...state, latarBelakang: value });
@@ -200,15 +202,17 @@ export const EssayGeneratorFeature = () => {
   };
 
   const handleReset = () => {
-    setResult(null);
-    setTemaUtama('');
-    setSubTema('');
-    setLatarBelakang('');
-    setShowLatarBelakang(false);
-    setShowOpsiLanjutan(false);
-    setSertakanPenjelasan(false);
-    setSertakanMetode(false);
-    setLastFormData(null);
+    setState({
+      temaUtama: '',
+      subTema: '',
+      latarBelakang: '',
+      showLatarBelakang: false,
+      showOpsiLanjutan: false,
+      sertakanPenjelasan: false,
+      sertakanMetode: false,
+      result: null,
+      lastFormData: null,
+    });
   };
 
   return (
@@ -230,7 +234,6 @@ export const EssayGeneratorFeature = () => {
             value={temaUtama}
             onValueChange={(value: 'soshum' | 'saintek') => {
               setTemaUtama(value);
-              setSubTema('');
             }}
           >
             <SelectTrigger>

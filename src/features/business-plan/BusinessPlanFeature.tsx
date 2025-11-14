@@ -116,9 +116,11 @@ export const BusinessPlanFeature = () => {
   };
 
   const handleReset = () => {
-    setResult(null);
-    setIdeBisnis('');
-    setSwitches({});
+    setState({
+      ideBisnis: '',
+      switches: {},
+      result: null,
+    });
   };
 
   return (

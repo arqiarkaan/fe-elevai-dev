@@ -152,7 +152,7 @@ export const PromptEnhancerFeature = () => {
   };
 
   const handleReset = () => {
-    setState((prev) => ({ ...prev, result: null, prompt: '' }));
+    setState({ selectedKebutuhan: null, prompt: '', result: null });
   };
 
   const handleBackToSelection = () => {

@@ -42,7 +42,7 @@ interface FormData {
 
 interface Stage1Response {
   ikigai_spots: Array<{ title: string; description: string }>;
-  life_purposes: Array<{ slice_of_life_purpose: string }>;
+  life_purposes: Array<{ statement: string }>;
 }
 
 import { useStepFeatureState } from '@/hooks/useFeatureState';
@@ -422,24 +422,29 @@ export const IkigaiFeature = () => {
           variant="outline"
           className="w-full"
           onClick={() => {
-            setStep(1);
-            setStage1Data(null);
-            setFinalResult(null);
-            setFormData({
-              nama: '',
-              jurusan: '',
-              semester: '',
-              universitas: '',
-              karirSesuai: '',
-              mbti: '',
-              via1: '',
-              via2: '',
-              via3: '',
-              career1: '',
-              career2: '',
-              career3: '',
-              ikigaiSpot: '',
-              sliceOfLife: '',
+            // Clear session storage first
+            sessionStorage.removeItem('feature_state_ikigai');
+            // Then reset state completely
+            setState({
+              step: 1,
+              formData: {
+                nama: '',
+                jurusan: '',
+                semester: '',
+                universitas: '',
+                karirSesuai: '',
+                mbti: '',
+                via1: '',
+                via2: '',
+                via3: '',
+                career1: '',
+                career2: '',
+                career3: '',
+                ikigaiSpot: '',
+                sliceOfLife: '',
+              },
+              stage1Data: null,
+              finalResult: null,
             });
           }}
         >
@@ -792,17 +797,16 @@ export const IkigaiFeature = () => {
                     onClick={() =>
                       setFormData({
                         ...formData,
-                        sliceOfLife: purpose.slice_of_life_purpose || '',
+                        sliceOfLife: purpose.statement || '',
                       })
                     }
                     className={`w-full p-4 text-left text-sm rounded-md border transition-smooth ${
-                      formData.sliceOfLife ===
-                      (purpose.slice_of_life_purpose || '')
+                      formData.sliceOfLife === (purpose.statement || '')
                         ? 'border-primary bg-primary/10'
                         : 'border-border bg-card hover:border-primary/50'
                     }`}
                   >
-                    {purpose.slice_of_life_purpose || `Option ${idx + 1}`}
+                    {purpose.statement || `Option ${idx + 1}`}
                   </button>
                 ))
               ) : (

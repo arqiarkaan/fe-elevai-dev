@@ -466,6 +466,9 @@ export const InterviewFeature = () => {
   };
 
   const handleRestartInterview = () => {
+    // Clear session storage first
+    sessionStorage.removeItem('feature_state_interview-simulation');
+    // Then reset state completely
     setState({
       step: 1,
       formData: {

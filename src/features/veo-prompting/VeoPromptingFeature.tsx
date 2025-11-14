@@ -153,20 +153,22 @@ export const VeoPromptingFeature = () => {
   };
 
   const handleReset = () => {
-    setResult(null);
-    setFormData({
-      subjek: '',
-      aksi: '',
-      ekspresi: '',
-      lokasi: '',
-      waktu: 'Pagi',
-      pencahayaan: '',
-      gerakanKamera: '',
-      gaya: '',
-      suasana: '',
-      suara: '',
-      dialog: '',
-      detail: '',
+    setState({
+      formData: {
+        subjek: '',
+        aksi: '',
+        ekspresi: '',
+        lokasi: '',
+        waktu: 'Pagi',
+        pencahayaan: '',
+        gerakanKamera: '',
+        gaya: '',
+        suasana: '',
+        suara: '',
+        dialog: '',
+        detail: '',
+      },
+      result: null,
     });
   };
 

@@ -231,6 +231,9 @@ export const EssayExchangeFeature = () => {
           variant="outline"
           className="w-full"
           onClick={() => {
+            // Clear session storage first
+            sessionStorage.removeItem('feature_state_essay-exchanges');
+            // Then reset state completely
             setState({
               step: 1,
               formData: {

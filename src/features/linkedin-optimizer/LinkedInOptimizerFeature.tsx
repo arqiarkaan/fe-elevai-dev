@@ -393,18 +393,24 @@ Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan p
 
           <Button
             onClick={() => {
-              setStep(1);
-              setFormData({
-                targetOptimasi: '',
-                namaLengkap: '',
-                jurusan: '',
-                semester: '',
-                targetKarir: '',
-                tujuanUtama: '',
-                targetRole: '',
-                identitasProfesional: '',
-                pencapaian: [''],
-                skills: [''],
+              // Clear session storage first
+              sessionStorage.removeItem('feature_state_linkedin-optimizer');
+              // Then reset state completely
+              setState({
+                step: 1,
+                formData: {
+                  targetOptimasi: '',
+                  namaLengkap: '',
+                  jurusan: '',
+                  semester: '',
+                  targetKarir: '',
+                  tujuanUtama: '',
+                  targetRole: '',
+                  identitasProfesional: '',
+                  pencapaian: [''],
+                  skills: [''],
+                },
+                generatedResult: null,
               });
             }}
             className="w-full bg-primary hover:bg-primary/90"

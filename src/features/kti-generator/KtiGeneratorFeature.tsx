@@ -127,10 +127,12 @@ export const KtiGeneratorFeature = () => {
   };
 
   const handleReset = () => {
-    setResult(null);
-    setTemaUtama('');
-    setSubTema('');
-    setSwitches({});
+    setState({
+      temaUtama: '',
+      subTema: '',
+      switches: {},
+      result: null,
+    });
   };
 
   return (
