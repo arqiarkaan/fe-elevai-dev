@@ -19,6 +19,8 @@ import { useMutation } from '@tanstack/react-query';
 import { studentDevelopmentApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
+import { useApiError } from '@/hooks/useApiError';
+import { clearFeatureState } from '@/lib/storage-utils';
 import { generatePDF } from '@/lib/pdf-generator';
 import { useStepFeatureState } from '@/hooks/useFeatureState';
 
@@ -116,7 +118,8 @@ export const IkigaiFeature = () => {
     'ikigai',
     validateStep
   );
-  const { refreshProfile, profile } = useUserStore();
+  const { refreshProfile } = useUserStore();
+  const { handleError } = useApiError();
 
   const { step, formData, stage1Data, finalResult } = state;
   const setFormData = (data: FormData) =>
@@ -164,53 +167,10 @@ export const IkigaiFeature = () => {
         refreshProfile();
       }
     },
-    onError: (error: unknown) => {
-      console.error('Ikigai Stage 1 error:', error);
-      // Handle different error formats
-      const err = error as {
-        response?: { data?: { error?: unknown } };
-        error?: string;
-        message?: string;
-        current_balance?: number;
-        need_to_purchase?: number;
-      };
-
-      let errorMessage = 'Terjadi kesalahan saat menganalisis';
-
-      if (err?.response?.data?.error) {
-        const apiError = err.response.data.error;
-        if (typeof apiError === 'string') {
-          errorMessage = apiError;
-        } else if (
-          apiError &&
-          typeof apiError === 'object' &&
-          'message' in apiError
-        ) {
-          errorMessage = String(apiError.message);
-        }
-      } else if (err?.error) {
-        errorMessage = err.error;
-      } else if (err?.message) {
-        errorMessage = err.message;
-      }
-
-      if (
-        err?.error === 'Insufficient tokens' ||
-        errorMessage.includes('Insufficient tokens')
-      ) {
-        toast.error(
-          `Token anda kurang (${err.current_balance || 0}). Butuh ${
-            err.need_to_purchase || 0
-          } token lagi.`
-        );
-      } else if (
-        err?.error === 'Premium subscription required' ||
-        errorMessage.includes('Premium subscription')
-      ) {
-        toast.error('Fitur ini memerlukan langganan premium');
-      } else {
-        toast.error(errorMessage);
-      }
+    onError: (error) => {
+      handleError(error, {
+        default: 'Terjadi kesalahan saat menganalisis',
+      });
     },
   });
 
@@ -239,53 +199,10 @@ export const IkigaiFeature = () => {
         await refreshProfile();
       }
     },
-    onError: (error: unknown) => {
-      console.error('Ikigai Final error:', error);
-      // Handle different error formats
-      const err = error as {
-        response?: { data?: { error?: unknown } };
-        error?: string;
-        message?: string;
-        current_balance?: number;
-        need_to_purchase?: number;
-      };
-
-      let errorMessage = 'Terjadi kesalahan saat menganalisis';
-
-      if (err?.response?.data?.error) {
-        const apiError = err.response.data.error;
-        if (typeof apiError === 'string') {
-          errorMessage = apiError;
-        } else if (
-          apiError &&
-          typeof apiError === 'object' &&
-          'message' in apiError
-        ) {
-          errorMessage = String(apiError.message);
-        }
-      } else if (err?.error) {
-        errorMessage = err.error;
-      } else if (err?.message) {
-        errorMessage = err.message;
-      }
-
-      if (
-        err?.error === 'Insufficient tokens' ||
-        errorMessage.includes('Insufficient tokens')
-      ) {
-        toast.error(
-          `Token anda kurang (${err.current_balance || 0}). Butuh ${
-            err.need_to_purchase || 0
-          } token lagi.`
-        );
-      } else if (
-        err?.error === 'Premium subscription required' ||
-        errorMessage.includes('Premium subscription')
-      ) {
-        toast.error('Fitur ini memerlukan langganan premium');
-      } else {
-        toast.error(errorMessage);
-      }
+    onError: (error) => {
+      handleError(error, {
+        default: 'Terjadi kesalahan saat menganalisis',
+      });
     },
   });
 
@@ -422,7 +339,7 @@ export const IkigaiFeature = () => {
           className="w-full"
           onClick={() => {
             // Clear session storage first
-            sessionStorage.removeItem('feature_state_ikigai');
+            clearFeatureState('ikigai');
             // Then reset state completely
             setState({
               step: 1,

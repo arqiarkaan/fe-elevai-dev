@@ -1,13 +1,18 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Coins, Sparkles, Loader2 } from 'lucide-react';
 import { paymentApi } from '@/lib/api';
 import { toast } from 'sonner';
-import { useUserStore } from '@/lib/user-store';
+import { useMidtransPayment } from '@/hooks/useMidtransPayment';
 
 interface TokenModalProps {
   open: boolean;
@@ -26,10 +31,9 @@ const TOKEN_PRICE_PER_UNIT = 1499;
 const MIN_CUSTOM_TOKENS = 5;
 
 export function TokenModal({ open, onOpenChange }: TokenModalProps) {
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
-  const [isSnapOpen, setIsSnapOpen] = useState(false);
-  const { refreshProfile } = useUserStore();
+  const { isSnapOpen, selectedItem, isProcessing, initiatePayment } =
+    useMidtransPayment(() => onOpenChange(false));
 
   // Fetch plans
   const { data: plansData, isLoading: plansLoading } = useQuery({
@@ -38,59 +42,8 @@ export function TokenModal({ open, onOpenChange }: TokenModalProps) {
     enabled: open,
   });
 
-  // Create payment mutation
-  const createPaymentMutation = useMutation({
-    mutationFn: (data: { type: 'tokens'; item: string; amount: number; tokens_amount: number }) =>
-      paymentApi.createPayment(data),
-    onSuccess: (response) => {
-      if (response.success && response.data.snap_token) {
-        // Prevent double calls
-        if (isSnapOpen) {
-          console.warn('Midtrans popup is already open');
-          return;
-        }
-
-        // Set flag before opening popup
-        setIsSnapOpen(true);
-        
-        // Close the modal first to prevent z-index issues
-        onOpenChange(false);
-        
-        // Small delay to ensure modal closes before opening Midtrans popup
-        setTimeout(() => {
-          // Open Midtrans SNAP popup
-          window.snap.pay(response.data.snap_token, {
-            onSuccess: function () {
-              setIsSnapOpen(false);
-              toast.success('Pembayaran berhasil! Token Anda akan segera ditambahkan.');
-              refreshProfile();
-              setCustomAmount('');
-            },
-            onPending: function () {
-              setIsSnapOpen(false);
-              toast.info('Pembayaran pending. Silakan selesaikan pembayaran Anda.');
-            },
-            onError: function () {
-              setIsSnapOpen(false);
-              toast.error('Pembayaran gagal. Silakan coba lagi.');
-            },
-            onClose: function () {
-              console.log('Payment popup closed');
-              setIsSnapOpen(false);
-            },
-          });
-        }, 300);
-      }
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Gagal membuat pembayaran');
-      setIsSnapOpen(false);
-    },
-  });
-
   const handleSelectPackage = (packageKey: string, pkg: TokenPackage) => {
-    setSelectedPackage(packageKey);
-    createPaymentMutation.mutate({
+    initiatePayment(packageKey, {
       type: 'tokens',
       item: packageKey,
       amount: pkg.price,
@@ -106,13 +59,13 @@ export function TokenModal({ open, onOpenChange }: TokenModalProps) {
     }
 
     const price = calculateCustomPrice(amount);
-    setSelectedPackage('custom');
-    createPaymentMutation.mutate({
+    initiatePayment('custom', {
       type: 'tokens',
       item: 'custom',
       amount: price,
       tokens_amount: amount,
     });
+    setCustomAmount('');
   };
 
   const calculateCustomPrice = (amount: number): number => {
@@ -121,7 +74,7 @@ export function TokenModal({ open, onOpenChange }: TokenModalProps) {
     // Each additional token costs 1499
     const basePrice = 7495;
     const additionalTokens = amount - MIN_CUSTOM_TOKENS;
-    return basePrice + (additionalTokens * TOKEN_PRICE_PER_UNIT);
+    return basePrice + additionalTokens * TOKEN_PRICE_PER_UNIT;
   };
 
   const formatPrice = (price: number) => {
@@ -137,7 +90,7 @@ export function TokenModal({ open, onOpenChange }: TokenModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogContent
         className="max-w-4xl max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full p-4 sm:p-6"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
@@ -147,7 +100,9 @@ export function TokenModal({ open, onOpenChange }: TokenModalProps) {
             <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
               <Coins className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <DialogTitle className="text-lg sm:text-2xl">Beli Token</DialogTitle>
+            <DialogTitle className="text-lg sm:text-2xl">
+              Beli Token
+            </DialogTitle>
           </div>
         </DialogHeader>
 
@@ -181,8 +136,12 @@ export function TokenModal({ open, onOpenChange }: TokenModalProps) {
                     </div>
 
                     <div>
-                      <h3 className="text-lg sm:text-xl font-bold mb-1.5 sm:mb-2">{pkg.name}</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">{pkg.description}</p>
+                      <h3 className="text-lg sm:text-xl font-bold mb-1.5 sm:mb-2">
+                        {pkg.name}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {pkg.description}
+                      </p>
                     </div>
 
                     <div className="text-2xl sm:text-3xl font-bold text-primary">
@@ -193,9 +152,11 @@ export function TokenModal({ open, onOpenChange }: TokenModalProps) {
                       className="w-full"
                       variant={pkg.isBestValue ? 'default' : 'outline'}
                       onClick={() => handleSelectPackage(key, pkg)}
-                      disabled={(createPaymentMutation.isPending && selectedPackage === key) || isSnapOpen}
+                      disabled={
+                        (isProcessing && selectedItem === key) || isSnapOpen
+                      }
                     >
-                      {createPaymentMutation.isPending && selectedPackage === key ? (
+                      {isProcessing && selectedItem === key ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
                           Memproses...
@@ -223,7 +184,9 @@ export function TokenModal({ open, onOpenChange }: TokenModalProps) {
             <Card className="p-4 sm:p-6">
               <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold mb-1.5 sm:mb-2">Beli Jumlah Lain?</h3>
+                  <h3 className="text-base sm:text-lg font-bold mb-1.5 sm:mb-2">
+                    Beli Jumlah Lain?
+                  </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground">
                     Beli token sesuai jumlah yang Anda butuhkan.
                   </p>
@@ -244,7 +207,9 @@ export function TokenModal({ open, onOpenChange }: TokenModalProps) {
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Minimal {MIN_CUSTOM_TOKENS} token</span>
+                  <span className="text-muted-foreground">
+                    Minimal {MIN_CUSTOM_TOKENS} token
+                  </span>
                   {customAmountNum > 0 && (
                     <span className="font-semibold">
                       Estimasi: {formatPrice(customPrice)}
@@ -255,9 +220,13 @@ export function TokenModal({ open, onOpenChange }: TokenModalProps) {
                 <Button
                   className="w-full"
                   onClick={handleCustomPurchase}
-                  disabled={!isCustomValid || (createPaymentMutation.isPending && selectedPackage === 'custom') || isSnapOpen}
+                  disabled={
+                    !isCustomValid ||
+                    (isProcessing && selectedItem === 'custom') ||
+                    isSnapOpen
+                  }
                 >
-                  {createPaymentMutation.isPending && selectedPackage === 'custom' ? (
+                  {isProcessing && selectedItem === 'custom' ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Memproses...

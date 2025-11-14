@@ -6,6 +6,8 @@ import { useMutation } from '@tanstack/react-query';
 import { personalBrandingApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
+import { useApiError } from '@/hooks/useApiError';
+import { clearFeatureState } from '@/lib/storage-utils';
 import {
   Loader2,
   Linkedin,
@@ -100,7 +102,8 @@ export const LinkedInOptimizerFeature = () => {
     'linkedin-optimizer',
     validateStep
   );
-  const { refreshProfile, profile } = useUserStore();
+  const { refreshProfile } = useUserStore();
+  const { handleError } = useApiError();
 
   const { step, formData, generatedResult } = state;
   const setFormData = (data: FormData) =>
@@ -225,21 +228,10 @@ export const LinkedInOptimizerFeature = () => {
         await refreshProfile();
       }
     },
-    onError: (error: {
-      error?: string;
-      current_balance?: number;
-      need_to_purchase?: number;
-    }) => {
-      console.error('LinkedIn Optimizer error:', error);
-      if (error.error === 'Insufficient tokens') {
-        toast.error(
-          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
-        );
-      } else if (error.error === 'Premium subscription required') {
-        toast.error('Fitur ini memerlukan langganan premium');
-      } else {
-        toast.error(error.error || 'Terjadi kesalahan saat generate');
-      }
+    onError: (error) => {
+      handleError(error, {
+        default: 'Terjadi kesalahan saat generate',
+      });
     },
   });
 
@@ -400,7 +392,7 @@ Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan p
           <Button
             onClick={() => {
               // Clear session storage first
-              sessionStorage.removeItem('feature_state_linkedin-optimizer');
+              clearFeatureState('linkedin-optimizer');
               // Then reset state completely
               setState({
                 step: 1,

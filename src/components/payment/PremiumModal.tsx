@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Crown, Check, Sparkles, Loader2 } from 'lucide-react';
 import { paymentApi } from '@/lib/api';
-import { toast } from 'sonner';
-import { useUserStore } from '@/lib/user-store';
-import type { MidtransPaymentResult } from '@/types/midtrans';
+import { useMidtransPayment } from '@/hooks/useMidtransPayment';
 
 interface PremiumModalProps {
   open: boolean;
@@ -24,9 +26,8 @@ interface SubscriptionPlan {
 }
 
 export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [isSnapOpen, setIsSnapOpen] = useState(false);
-  const { refreshProfile } = useUserStore();
+  const { isSnapOpen, selectedItem, isProcessing, initiatePayment } =
+    useMidtransPayment(() => onOpenChange(false));
 
   // Fetch plans
   const { data: plansData, isLoading: plansLoading } = useQuery({
@@ -35,61 +36,8 @@ export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
     enabled: open,
   });
 
-  // Create payment mutation
-  const createPaymentMutation = useMutation({
-    mutationFn: (data: { type: 'subscription'; item: string; amount: number; tokens_amount?: number }) =>
-      paymentApi.createPayment(data),
-    onSuccess: (response) => {
-      if (response.success && response.data.snap_token) {
-        // Prevent double calls
-        if (isSnapOpen) {
-          console.warn('Midtrans popup is already open');
-          return;
-        }
-
-        // Set flag before opening popup
-        setIsSnapOpen(true);
-        
-        // Close the modal first to prevent z-index issues
-        onOpenChange(false);
-        
-        // Small delay to ensure modal closes before opening Midtrans popup
-        setTimeout(() => {
-          // Open Midtrans SNAP popup
-          window.snap.pay(response.data.snap_token, {
-            onSuccess: function (result: MidtransPaymentResult) {
-              console.log('Payment success:', result);
-              setIsSnapOpen(false);
-              toast.success('Pembayaran berhasil! Premium Anda akan segera aktif.');
-              refreshProfile();
-            },
-            onPending: function (result: MidtransPaymentResult) {
-              console.log('Payment pending:', result);
-              setIsSnapOpen(false);
-              toast.info('Pembayaran pending. Silakan selesaikan pembayaran Anda.');
-            },
-            onError: function (result: MidtransPaymentResult) {
-              console.error('Payment error:', result);
-              setIsSnapOpen(false);
-              toast.error('Pembayaran gagal. Silakan coba lagi.');
-            },
-            onClose: function () {
-              console.log('Payment popup closed');
-              setIsSnapOpen(false);
-            },
-          });
-        }, 300);
-      }
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Gagal membuat pembayaran');
-      setIsSnapOpen(false);
-    },
-  });
-
   const handleSelectPlan = (planKey: string, plan: SubscriptionPlan) => {
-    setSelectedPlan(planKey);
-    createPaymentMutation.mutate({
+    initiatePayment(planKey, {
       type: 'subscription',
       item: planKey,
       amount: plan.price,
@@ -102,11 +50,14 @@ export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
   };
 
   const subscriptions = plansData?.data?.subscriptions || {};
-  const subscriptionEntries = Object.entries(subscriptions) as [string, SubscriptionPlan][];
+  const subscriptionEntries = Object.entries(subscriptions) as [
+    string,
+    SubscriptionPlan
+  ][];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogContent
         className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full p-4 sm:p-6"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
@@ -116,7 +67,9 @@ export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
             <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
               <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <DialogTitle className="text-lg sm:text-2xl">Pilih Langganan Premium</DialogTitle>
+            <DialogTitle className="text-lg sm:text-2xl">
+              Pilih Langganan Premium
+            </DialogTitle>
           </div>
         </DialogHeader>
 
@@ -149,8 +102,12 @@ export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
                     </div>
 
                     <div>
-                      <h3 className="text-lg sm:text-xl font-bold mb-1.5 sm:mb-2">{plan.name}</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">{plan.description}</p>
+                      <h3 className="text-lg sm:text-xl font-bold mb-1.5 sm:mb-2">
+                        {plan.name}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {plan.description}
+                      </p>
                     </div>
 
                     <div className="text-2xl sm:text-3xl font-bold text-primary">
@@ -168,7 +125,10 @@ export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-primary" />
-                        <span>Berlaku {plan.duration === 'monthly' ? '30 hari' : '365 hari'}</span>
+                        <span>
+                          Berlaku{' '}
+                          {plan.duration === 'monthly' ? '30 hari' : '365 hari'}
+                        </span>
                       </div>
                     </div>
 
@@ -176,9 +136,11 @@ export function PremiumModal({ open, onOpenChange }: PremiumModalProps) {
                       className="w-full"
                       variant={plan.isBestValue ? 'default' : 'outline'}
                       onClick={() => handleSelectPlan(key, plan)}
-                      disabled={(createPaymentMutation.isPending && selectedPlan === key) || isSnapOpen}
+                      disabled={
+                        (isProcessing && selectedItem === key) || isSnapOpen
+                      }
                     >
-                      {createPaymentMutation.isPending && selectedPlan === key ? (
+                      {isProcessing && selectedItem === key ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
                           Memproses...

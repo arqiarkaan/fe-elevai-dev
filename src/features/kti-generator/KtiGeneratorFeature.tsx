@@ -15,6 +15,7 @@ import { useMutation } from '@tanstack/react-query';
 import { asistenLombaApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
+import { useApiError } from '@/hooks/useApiError';
 import {
   GeneratedResultCard,
   LoadingStateCard,
@@ -47,7 +48,8 @@ export const KtiGeneratorFeature = () => {
     },
     'kti-generator'
   );
-  const { refreshProfile, profile } = useUserStore();
+  const { refreshProfile } = useUserStore();
+  const { handleError } = useApiError();
 
   const { temaUtama, subTema, switches, result } = state;
   const setTemaUtama = (value: string) =>
@@ -99,19 +101,10 @@ export const KtiGeneratorFeature = () => {
         await refreshProfile();
       }
     },
-    onError: (error: {
-      error?: string;
-      current_balance?: number;
-      need_to_purchase?: number;
-    }) => {
-      console.error('KTI Generator error:', error);
-      if (error.error === 'Insufficient tokens') {
-        toast.error(
-          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
-        );
-      } else {
-        toast.error(error.error || 'Terjadi kesalahan saat generate ide KTI');
-      }
+    onError: (error) => {
+      handleError(error, {
+        default: 'Terjadi kesalahan saat generate ide KTI',
+      });
     },
   });
 

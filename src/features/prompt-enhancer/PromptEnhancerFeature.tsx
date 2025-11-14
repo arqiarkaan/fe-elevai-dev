@@ -14,6 +14,8 @@ import { useMutation } from '@tanstack/react-query';
 import { dailyToolsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
+import { useApiError } from '@/hooks/useApiError';
+import { clearFeatureState } from '@/lib/storage-utils';
 import {
   GeneratedResultCard,
   LoadingStateCard,
@@ -93,7 +95,8 @@ export const PromptEnhancerFeature = () => {
     },
     selectedId ? `prompt-enhancer-${selectedId}` : 'prompt-enhancer' // Use unique storage per sub-route
   );
-  const { refreshProfile, profile } = useUserStore();
+  const { refreshProfile } = useUserStore();
+  const { handleError } = useApiError();
 
   const selected = kebutuhanOptions.find((opt) => opt.id === selectedId);
 
@@ -128,19 +131,10 @@ export const PromptEnhancerFeature = () => {
         await refreshProfile();
       }
     },
-    onError: (error: {
-      error?: string;
-      current_balance?: number;
-      need_to_purchase?: number;
-    }) => {
-      console.error('Prompt Enhancer error:', error);
-      if (error.error === 'Insufficient tokens') {
-        toast.error(
-          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
-        );
-      } else {
-        toast.error(error.error || 'Terjadi kesalahan saat enhance prompt');
-      }
+    onError: (error) => {
+      handleError(error, {
+        default: 'Terjadi kesalahan saat enhance prompt',
+      });
     },
   });
 
@@ -159,7 +153,7 @@ export const PromptEnhancerFeature = () => {
     const storageKey = selectedId
       ? `prompt-enhancer-${selectedId}`
       : 'prompt-enhancer';
-    sessionStorage.removeItem(`feature_state_${storageKey}`);
+    clearFeatureState(storageKey);
     setState({ prompt: '', result: null });
   };
 
@@ -167,7 +161,7 @@ export const PromptEnhancerFeature = () => {
     const storageKey = selectedId
       ? `prompt-enhancer-${selectedId}`
       : 'prompt-enhancer';
-    sessionStorage.removeItem(`feature_state_${storageKey}`);
+    clearFeatureState(storageKey);
     navigate('/dashboard/features/prompt-enhancer');
   };
 

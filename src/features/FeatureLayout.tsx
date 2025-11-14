@@ -21,6 +21,8 @@ import {
 import { ArrowLeft, Crown, Coins, LogOut, Menu, Bot } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth';
 import { useUserStore, subscribeToProfileChanges } from '@/lib/user-store';
+import { useUserInfo } from '@/hooks/useUserInfo';
+import { clearAllFeatureStates } from '@/lib/storage-utils';
 import { PremiumModal } from '@/components/payment/PremiumModal';
 import { TokenModal } from '@/components/payment/TokenModal';
 import { TokenIndicator } from '@/components/TokenIndicator';
@@ -30,7 +32,8 @@ export const FeatureLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuthStore();
-  const { profile, fetchProfile } = useUserStore();
+  const { fetchProfile } = useUserStore();
+  const { username, isPremium, tokens } = useUserInfo();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -45,24 +48,6 @@ export const FeatureLayout = () => {
       return unsubscribe;
     }
   }, [user?.id, fetchProfile]);
-
-  // Check if user is premium and not expired
-  const isPremium =
-    profile?.is_premium &&
-    (!profile.premium_expires_at ||
-      new Date(profile.premium_expires_at) > new Date());
-
-  const userTokens = profile?.tokens || 0;
-
-  // Get user's first name from metadata, fallback to email
-  const getFirstName = () => {
-    const fullName = user?.user_metadata?.full_name;
-    if (fullName) {
-      return fullName.split(' ')[0]; // Take only first word
-    }
-    return user?.email?.split('@')[0] || 'User';
-  };
-  const username = getFirstName();
 
   // Helper function to extract feature ID from pathname
   const getFeatureIdFromPath = () => {
@@ -110,25 +95,7 @@ export const FeatureLayout = () => {
 
   const handleBack = () => {
     // Clear ALL feature-related session storage when going back to dashboard
-    try {
-      // Get all keys from sessionStorage
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && key.startsWith('feature_state_')) {
-          keysToRemove.push(key);
-        }
-      }
-
-      // Remove all feature state keys
-      keysToRemove.forEach((key) => {
-        sessionStorage.removeItem(key);
-        console.log(`Cleared session storage: ${key}`);
-      });
-    } catch (error) {
-      console.error('Error clearing feature state:', error);
-    }
-
+    clearAllFeatureStates();
     navigate('/dashboard');
   };
 
@@ -205,7 +172,7 @@ export const FeatureLayout = () => {
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-help">
                       <Coins className="w-4 h-4 text-amber-500" />
                       <span className="text-sm font-semibold text-amber-500">
-                        {userTokens}
+                        {tokens}
                       </span>
                     </div>
                   </TooltipTrigger>
@@ -245,7 +212,7 @@ export const FeatureLayout = () => {
                       <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/10">
                         <Coins className="w-5 h-5 text-amber-500" />
                         <span className="text-base font-bold text-amber-500">
-                          {userTokens} Token
+                          {tokens} Token
                         </span>
                       </div>
                     </div>

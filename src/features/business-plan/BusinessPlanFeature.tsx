@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query';
 import { asistenLombaApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
+import { useApiError } from '@/hooks/useApiError';
 import {
   GeneratedResultCard,
   LoadingStateCard,
@@ -37,7 +38,8 @@ export const BusinessPlanFeature = () => {
     },
     'business-plan'
   );
-  const { refreshProfile, profile } = useUserStore();
+  const { refreshProfile } = useUserStore();
+  const { handleError } = useApiError();
 
   const { ideBisnis, switches, result } = state;
   const setIdeBisnis = (value: string) =>
@@ -86,21 +88,10 @@ export const BusinessPlanFeature = () => {
         await refreshProfile();
       }
     },
-    onError: (error: {
-      error?: string;
-      current_balance?: number;
-      need_to_purchase?: number;
-    }) => {
-      console.error('Business Plan Generator error:', error);
-      if (error.error === 'Insufficient tokens') {
-        toast.error(
-          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
-        );
-      } else {
-        toast.error(
-          error.error || 'Terjadi kesalahan saat generate business plan'
-        );
-      }
+    onError: (error) => {
+      handleError(error, {
+        default: 'Terjadi kesalahan saat generate business plan',
+      });
     },
   });
 

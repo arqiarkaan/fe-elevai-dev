@@ -15,6 +15,8 @@ import { useMutation } from '@tanstack/react-query';
 import { studentDevelopmentApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
+import { useApiError } from '@/hooks/useApiError';
+import { clearFeatureState } from '@/lib/storage-utils';
 import { generatePDF } from '@/lib/pdf-generator';
 import { useStepFeatureState } from '@/hooks/useFeatureState';
 
@@ -60,7 +62,8 @@ export const SwotFeature = () => {
     'swot',
     validateStep
   );
-  const { profile, refreshProfile } = useUserStore();
+  const { refreshProfile } = useUserStore();
+  const { handleError } = useApiError();
 
   const { step, formData, result } = state;
 
@@ -82,21 +85,10 @@ export const SwotFeature = () => {
         await refreshProfile();
       }
     },
-    onError: (error: {
-      error?: string;
-      current_balance?: number;
-      need_to_purchase?: number;
-    }) => {
-      console.error('SWOT Analysis error:', error);
-      if (error.error === 'Insufficient tokens') {
-        toast.error(
-          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
-        );
-      } else if (error.error === 'Premium subscription required') {
-        toast.error('Fitur ini memerlukan langganan premium');
-      } else {
-        toast.error(error.error || 'Terjadi kesalahan saat menganalisis');
-      }
+    onError: (error) => {
+      handleError(error, {
+        default: 'Terjadi kesalahan saat menganalisis',
+      });
     },
   });
 
@@ -184,7 +176,7 @@ export const SwotFeature = () => {
           className="w-full"
           onClick={() => {
             // Clear session storage first
-            sessionStorage.removeItem('feature_state_swot');
+            clearFeatureState('swot');
             // Then reset state completely
             setState({
               step: 1,

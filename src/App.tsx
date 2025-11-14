@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from '@/lib/auth';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { CustomCursor } from '@/components/CustomCursor';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { FeatureLayout } from '@/features/FeatureLayout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -33,14 +34,19 @@ import { LinkedInOptimizerFeature } from '@/features/linkedin-optimizer/LinkedIn
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  const { initialize, initialized } = useAuthStore();
+  const { initialize, initialized, cleanup } = useAuthStore();
 
-  // Initialize auth on mount
+  // Initialize auth on mount and cleanup on unmount
   useEffect(() => {
     if (!initialized) {
       initialize();
     }
-  }, [initialized, initialize]);
+
+    // Cleanup auth subscription on unmount
+    return () => {
+      cleanup();
+    };
+  }, [initialized, initialize, cleanup]);
 
   return (
     <>
@@ -126,11 +132,13 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AppContent />
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AppContent />
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

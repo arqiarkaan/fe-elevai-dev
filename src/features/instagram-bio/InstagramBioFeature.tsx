@@ -24,6 +24,8 @@ import {
 import { useMutation } from '@tanstack/react-query';
 import { personalBrandingApi } from '@/lib/api';
 import { useUserStore } from '@/lib/user-store';
+import { useApiError } from '@/hooks/useApiError';
+import { clearFeatureState } from '@/lib/storage-utils';
 import { useState } from 'react';
 
 import { useStepFeatureState } from '@/hooks/useFeatureState';
@@ -92,7 +94,8 @@ export const InstagramBioFeature = () => {
     'instagram-bio',
     validateStep
   );
-  const { refreshProfile, profile } = useUserStore();
+  const { refreshProfile } = useUserStore();
+  const { handleError } = useApiError();
 
   // Use local state for File object (cannot be serialized to localStorage)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -127,8 +130,10 @@ export const InstagramBioFeature = () => {
         analyzeMutation.mutate(data.data.bio_text);
       }
     },
-    onError: (error: { error?: string }) => {
-      toast.error(error.error || 'Gagal mengupload gambar');
+    onError: (error) => {
+      handleError(error, {
+        default: 'Gagal mengupload gambar',
+      });
     },
   });
 
@@ -142,8 +147,10 @@ export const InstagramBioFeature = () => {
         setStep(2);
       }
     },
-    onError: (error: { error?: string }) => {
-      toast.error(error.error || 'Gagal menganalisis bio');
+    onError: (error) => {
+      handleError(error, {
+        default: 'Gagal menganalisis bio',
+      });
     },
   });
 
@@ -176,20 +183,10 @@ export const InstagramBioFeature = () => {
         await refreshProfile();
       }
     },
-    onError: (error: {
-      error?: string;
-      current_balance?: number;
-      need_to_purchase?: number;
-    }) => {
-      if (error.error === 'Insufficient tokens') {
-        toast.error(
-          `Token anda kurang (${error.current_balance}). Butuh ${error.need_to_purchase} token lagi.`
-        );
-      } else if (error.error === 'Premium subscription required') {
-        toast.error('Fitur ini memerlukan langganan premium');
-      } else {
-        toast.error(error.error || 'Terjadi kesalahan saat generate bio');
-      }
+    onError: (error) => {
+      handleError(error, {
+        default: 'Terjadi kesalahan saat generate bio',
+      });
     },
   });
 
@@ -299,7 +296,7 @@ export const InstagramBioFeature = () => {
 
   const handleAnalyzeAnother = () => {
     // Clear session storage first
-    sessionStorage.removeItem('feature_state_instagram-bio');
+    clearFeatureState('instagram-bio');
 
     // Reset local state
     setUploadedFile(null);

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabaseQueries } from './api';
 import { supabase } from './supabase';
+import type { UserProfile } from '@/types/api';
 
 const STORAGE_KEY = 'elevai_user_profile';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -9,6 +10,20 @@ interface CachedProfile {
   profile: UserProfile;
   timestamp: number;
 }
+
+/**
+ * Selector hooks for optimized re-renders
+ * Use these instead of using the whole store
+ */
+export const useUserTokens = () =>
+  useUserStore((state) => state.profile?.tokens || 0);
+export const useUserPremiumStatus = () =>
+  useUserStore((state) => {
+    const isPremium = state.profile?.is_premium;
+    const expiresAt = state.profile?.premium_expires_at;
+    return isPremium && (!expiresAt || new Date(expiresAt) > new Date());
+  });
+export const useUserProfile = () => useUserStore((state) => state.profile);
 
 // Helper functions for localStorage
 const loadFromCache = (): UserProfile | null => {
@@ -50,19 +65,6 @@ const clearCache = () => {
     console.error('Error clearing profile cache:', error);
   }
 };
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  tokens: number;
-  is_premium: boolean;
-  premium_plan: string | null;
-  premium_expires_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
 
 interface UserStore {
   profile: UserProfile | null;

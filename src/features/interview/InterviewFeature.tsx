@@ -30,6 +30,8 @@ import { useMutation } from '@tanstack/react-query';
 import { studentDevelopmentApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
+import { useApiError } from '@/hooks/useApiError';
+import { clearFeatureState } from '@/lib/storage-utils';
 import SpeechRecognition, {
   useSpeechRecognition,
 } from 'react-speech-recognition';
@@ -117,7 +119,8 @@ export const InterviewFeature = () => {
   const [speechError, setSpeechError] = useState<string>('');
   const [isDraggingCV, setIsDraggingCV] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const { refreshProfile, profile } = useUserStore();
+  const { refreshProfile } = useUserStore();
+  const { handleError } = useApiError();
 
   const { step, formData, interviewSession, currentAnswer, evaluation } = state;
 
@@ -136,6 +139,15 @@ export const InterviewFeature = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript]);
+
+  // Cleanup speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (listening) {
+        SpeechRecognition.stopListening();
+      }
+    };
+  }, [listening]);
 
   // Setup speech recognition error handlers
   useEffect(() => {
@@ -264,11 +276,10 @@ export const InterviewFeature = () => {
         toast.success('CV berhasil diupload dan diekstrak');
       }
     },
-    onError: (error: unknown) => {
-      console.error('Upload CV error:', error);
-      const err = error as { error?: string; message?: string };
-      const errorMessage = err?.error || err?.message || 'Gagal mengupload CV';
-      toast.error(errorMessage);
+    onError: (error) => {
+      handleError(error, {
+        default: 'Gagal mengupload CV',
+      });
     },
   });
 
@@ -308,12 +319,10 @@ export const InterviewFeature = () => {
         }, 500);
       }
     },
-    onError: (error: unknown) => {
-      console.error('Start interview error:', error);
-      const err = error as { error?: string; message?: string };
-      const errorMessage =
-        err?.error || err?.message || 'Gagal memulai interview';
-      toast.error(errorMessage);
+    onError: (error) => {
+      handleError(error, {
+        default: 'Gagal memulai interview',
+      });
     },
   });
 
@@ -358,44 +367,10 @@ export const InterviewFeature = () => {
         }
       }
     },
-    onError: (error: unknown) => {
-      console.error('Answer mutation error:', error);
-
-      // Handle different error formats
-      const err = error as {
-        error?: string | { name?: string; message?: string };
-        message?: string;
-        current_balance?: number;
-        need_to_purchase?: number;
-      };
-
-      // Extract error message from various formats
-      let errorMessage = 'Terjadi kesalahan';
-
-      if (typeof err?.error === 'string') {
-        errorMessage = err.error;
-      } else if (typeof err?.error === 'object' && err?.error?.message) {
-        errorMessage = err.error.message;
-      } else if (err?.message) {
-        errorMessage = err.message;
-      }
-
-      const currentBalance = err?.current_balance;
-      const needToPurchase = err?.need_to_purchase;
-
-      if (
-        errorMessage === 'Insufficient tokens' &&
-        currentBalance !== undefined
-      ) {
-        toast.error(
-          `Token anda kurang (${currentBalance}). Butuh ${needToPurchase} token lagi.`
-        );
-      } else if (errorMessage === 'Premium subscription required') {
-        toast.error('Fitur ini memerlukan langganan premium');
-      } else {
-        // Show more readable error message
-        toast.error(errorMessage);
-      }
+    onError: (error) => {
+      handleError(error, {
+        default: 'Terjadi kesalahan saat memproses jawaban',
+      });
     },
   });
 
@@ -495,8 +470,12 @@ export const InterviewFeature = () => {
   };
 
   const handleRestartInterview = () => {
+    // Stop speech recognition if active
+    if (listening) {
+      SpeechRecognition.stopListening();
+    }
     // Clear session storage first
-    sessionStorage.removeItem('feature_state_interview-simulation');
+    clearFeatureState('interview-simulation');
     // Then reset state completely
     setState({
       step: 1,
