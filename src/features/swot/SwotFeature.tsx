@@ -2,7 +2,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { User, ArrowRight, Loader2, ArrowLeft, Download } from 'lucide-react';
+import {
+  User,
+  ArrowRight,
+  Loader2,
+  ArrowLeft,
+  Download,
+  CheckCircle2,
+} from 'lucide-react';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { useMutation } from '@tanstack/react-query';
 import { studentDevelopmentApi } from '@/lib/api';
@@ -56,14 +63,6 @@ export const SwotFeature = () => {
   const { profile, refreshProfile } = useUserStore();
 
   const { step, formData, result } = state;
-  const setFormData = (data: {
-    mbti: string;
-    via1: string;
-    via2: string;
-    via3: string;
-  }) => setState({ ...state, formData: data });
-  const setResult = (data: { analysis: string; tokens_used?: number } | null) =>
-    setState({ ...state, result: data });
 
   const isValid =
     formData.mbti && formData.via1 && formData.via2 && formData.via3;
@@ -77,8 +76,7 @@ export const SwotFeature = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
-        setResult(data.data);
-        setStep(2);
+        setState({ ...state, result: data.data, step: 2 });
         // Refresh profile to update token balance
         refreshProfile();
       }
@@ -159,9 +157,13 @@ export const SwotFeature = () => {
           <span>Hasil Analisis SWOT Diri & Rencana Aksi:</span>
         </div>
 
-        <Card className="p-6 bg-card/50 border-border/50 space-y-2">
-          <h3 className="text-xl font-bold">Data Diri untuk Analisis:</h3>
-          <div className="text-sm space-y-1">
+        {/* Data Analisis */}
+        <Card className="p-6 bg-card/50 border-border/50">
+          <h3 className="font-bold text-lg mb-4 text-primary flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" />
+            Data Analisis
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <p>
               <strong>MBTI:</strong> {formData.mbti}
             </p>
@@ -180,9 +182,11 @@ export const SwotFeature = () => {
           variant="outline"
           className="w-full"
           onClick={() => {
-            setStep(1);
-            setResult(null);
-            setFormData({ mbti: '', via1: '', via2: '', via3: '' });
+            setState({
+              step: 1,
+              formData: { mbti: '', via1: '', via2: '', via3: '' },
+              result: null,
+            });
           }}
         >
           <ArrowLeft className="w-4 h-4" />
@@ -218,7 +222,10 @@ export const SwotFeature = () => {
               maxLength={4}
               value={formData.mbti}
               onChange={(e) =>
-                setFormData({ ...formData, mbti: e.target.value.toUpperCase() })
+                setState({
+                  ...state,
+                  formData: { ...formData, mbti: e.target.value.toUpperCase() },
+                })
               }
             />
           </div>
@@ -229,10 +236,13 @@ export const SwotFeature = () => {
               VIA Character Strength #1
             </Label>
             <Input
-              placeholder="Misal: Creativity"
+              placeholder="VIA Strength #1"
               value={formData.via1}
               onChange={(e) =>
-                setFormData({ ...formData, via1: e.target.value })
+                setState({
+                  ...state,
+                  formData: { ...formData, via1: e.target.value },
+                })
               }
             />
           </div>
@@ -243,10 +253,13 @@ export const SwotFeature = () => {
               VIA Character Strength #2
             </Label>
             <Input
-              placeholder="Misal: Honesty"
+              placeholder="VIA Strength #2"
               value={formData.via2}
               onChange={(e) =>
-                setFormData({ ...formData, via2: e.target.value })
+                setState({
+                  ...state,
+                  formData: { ...formData, via2: e.target.value },
+                })
               }
             />
           </div>
@@ -257,10 +270,13 @@ export const SwotFeature = () => {
               VIA Character Strength #3
             </Label>
             <Input
-              placeholder="Misal: Kindness"
+              placeholder="VIA Strength #3"
               value={formData.via3}
               onChange={(e) =>
-                setFormData({ ...formData, via3: e.target.value })
+                setState({
+                  ...state,
+                  formData: { ...formData, via3: e.target.value },
+                })
               }
             />
           </div>

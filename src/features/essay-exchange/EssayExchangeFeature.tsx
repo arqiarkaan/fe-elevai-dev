@@ -1,4 +1,4 @@
-import { useFeatureState } from '@/hooks/useFeatureState';
+import { useStepFeatureState } from '@/hooks/useFeatureState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,16 +12,22 @@ import {
   Award,
   Target,
   Sparkles,
-  Copy,
   Loader2,
+  ArrowRight,
+  Download,
+  CheckCircle2,
 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { studentDevelopmentApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { generatePDF } from '@/lib/pdf-generator';
+
+type Step = 1 | 2;
 
 interface EssayExchangeState {
+  step: Step;
   formData: {
     namaProgram: string;
     negaraUniversitas: string;
@@ -37,8 +43,22 @@ interface EssayExchangeState {
 }
 
 export const EssayExchangeFeature = () => {
-  const [state, setState] = useFeatureState<EssayExchangeState>(
+  // Step validation function
+  const validateStep = (step: number, state: EssayExchangeState): boolean => {
+    switch (step) {
+      case 1:
+        return true; // Step 1 always accessible
+      case 2:
+        // Step 2 requires result (essay generated)
+        return !!state.result;
+      default:
+        return false;
+    }
+  };
+
+  const [state, setState, setStep] = useStepFeatureState<EssayExchangeState>(
     {
+      step: 1,
       formData: {
         namaProgram: '',
         negaraUniversitas: '',
@@ -49,15 +69,12 @@ export const EssayExchangeFeature = () => {
       },
       result: null,
     },
-    'essay-exchange'
+    'essay-exchanges',
+    validateStep
   );
   const { refreshProfile } = useUserStore();
 
-  const { formData, result } = state;
-  const setFormData = (data: EssayExchangeState['formData']) =>
-    setState({ ...state, formData: data });
-  const setResult = (data: { essay: string; tokens_used?: number } | null) =>
-    setState({ ...state, result: data });
+  const { step, formData, result } = state;
 
   const isValid = Object.values(formData).every((val) => val.trim() !== '');
 
@@ -74,7 +91,7 @@ export const EssayExchangeFeature = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
-        setResult(data.data);
+        setState({ ...state, result: data.data, step: 2 });
         refreshProfile();
       }
     },
@@ -96,18 +113,42 @@ export const EssayExchangeFeature = () => {
     },
   });
 
-  const handleCopy = () => {
-    if (result?.essay) {
-      navigator.clipboard.writeText(result.essay);
-      toast.success('Esai berhasil disalin!');
-    }
-  };
-
   const handleGenerate = () => {
     generateMutation.mutate();
   };
 
-  if (result) {
+  const handleDownloadPDF = () => {
+    if (!result) {
+      toast.error('Tidak ada hasil untuk didownload');
+      return;
+    }
+
+    try {
+      const doc = generatePDF({
+        title: 'AI Motivation Letter',
+        subtitle: 'Powered by ElevAI',
+        content: result.essay,
+        userData: {
+          'Nama Program': formData.namaProgram,
+          'Negara & Universitas': formData.negaraUniversitas,
+          'Motivasi Akademik': formData.motivasiAkademik,
+          'Motivasi Pribadi': formData.motivasiPribadi,
+          'Skill & Pengalaman': formData.skillPengalaman,
+          'Rencana Kontribusi': formData.rencanaPasca,
+        },
+      });
+
+      doc.save(
+        `Motivation-Letter-${formData.namaProgram}-${new Date().getTime()}.pdf`
+      );
+      toast.success('PDF berhasil didownload!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Gagal membuat PDF');
+    }
+  };
+
+  if (step === 2 && result) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div>
@@ -119,32 +160,88 @@ export const EssayExchangeFeature = () => {
           </p>
         </div>
 
-        <Card className="p-6 bg-card/50 border-border/50 relative">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleCopy}
-            className="absolute top-4 right-4"
-          >
-            <Copy className="w-4 h-4" />
-          </Button>
-          <div className="pr-12">
-            <MarkdownRenderer>{result.essay}</MarkdownRenderer>
+        {/* Download PDF Button */}
+        <Button
+          onClick={handleDownloadPDF}
+          className="flex items-center justify-center gap-2 w-full"
+        >
+          <Download className="w-4 h-4" />
+          Download Laporan PDF
+        </Button>
+
+        <div className="flex items-center gap-2 text-lg font-semibold">
+          <ArrowRight className="w-5 h-5 text-primary" />
+          <span>Hasil Motivation Letter:</span>
+        </div>
+
+        {/* Data Analisis */}
+        <Card className="p-6 bg-card/50 border-border/50">
+          <h3 className="font-bold text-lg mb-4 text-primary flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" />
+            Data Analisis
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <p>
+                <strong>Nama Program:</strong> {formData.namaProgram}
+              </p>
+              <p>
+                <strong>Negara & Universitas:</strong>{' '}
+                {formData.negaraUniversitas}
+              </p>
+            </div>
+            <div className="md:col-span-2">
+              <p>
+                <strong>Motivasi Akademik:</strong>
+              </p>
+              <p className="text-muted-foreground">
+                {formData.motivasiAkademik}
+              </p>
+            </div>
+            <div className="md:col-span-2">
+              <p>
+                <strong>Motivasi Pribadi & Kultural:</strong>
+              </p>
+              <p className="text-muted-foreground">
+                {formData.motivasiPribadi}
+              </p>
+            </div>
+            <div className="md:col-span-2">
+              <p>
+                <strong>Skill & Pengalaman:</strong>
+              </p>
+              <p className="text-muted-foreground">
+                {formData.skillPengalaman}
+              </p>
+            </div>
+            <div className="md:col-span-2">
+              <p>
+                <strong>Rencana Kontribusi:</strong>
+              </p>
+              <p className="text-muted-foreground">{formData.rencanaPasca}</p>
+            </div>
           </div>
+        </Card>
+
+        <Card className="p-6 bg-card/50 border-border/50">
+          <MarkdownRenderer>{result.essay}</MarkdownRenderer>
         </Card>
 
         <Button
           variant="outline"
           className="w-full"
           onClick={() => {
-            setResult(null);
-            setFormData({
-              namaProgram: '',
-              negaraUniversitas: '',
-              motivasiAkademik: '',
-              motivasiPribadi: '',
-              skillPengalaman: '',
-              rencanaPasca: '',
+            setState({
+              step: 1,
+              formData: {
+                namaProgram: '',
+                negaraUniversitas: '',
+                motivasiAkademik: '',
+                motivasiPribadi: '',
+                skillPengalaman: '',
+                rencanaPasca: '',
+              },
+              result: null,
             });
           }}
         >
@@ -177,7 +274,10 @@ export const EssayExchangeFeature = () => {
             placeholder="Cth: IISMA"
             value={formData.namaProgram}
             onChange={(e) =>
-              setFormData({ ...formData, namaProgram: e.target.value })
+              setState({
+                ...state,
+                formData: { ...formData, namaProgram: e.target.value },
+              })
             }
           />
         </div>
@@ -191,7 +291,10 @@ export const EssayExchangeFeature = () => {
             placeholder="Cth: USA, University of Pennsylvania"
             value={formData.negaraUniversitas}
             onChange={(e) =>
-              setFormData({ ...formData, negaraUniversitas: e.target.value })
+              setState({
+                ...state,
+                formData: { ...formData, negaraUniversitas: e.target.value },
+              })
             }
           />
         </div>
@@ -205,7 +308,10 @@ export const EssayExchangeFeature = () => {
             placeholder="Mata kuliah apa yang ingin diambil? Mengapa Relevan?"
             value={formData.motivasiAkademik}
             onChange={(e) =>
-              setFormData({ ...formData, motivasiAkademik: e.target.value })
+              setState({
+                ...state,
+                formData: { ...formData, motivasiAkademik: e.target.value },
+              })
             }
             rows={4}
           />
@@ -220,7 +326,10 @@ export const EssayExchangeFeature = () => {
             placeholder="Apa yang kamu pelajari dari budayanya?"
             value={formData.motivasiPribadi}
             onChange={(e) =>
-              setFormData({ ...formData, motivasiPribadi: e.target.value })
+              setState({
+                ...state,
+                formData: { ...formData, motivasiPribadi: e.target.value },
+              })
             }
             rows={4}
           />
@@ -235,7 +344,10 @@ export const EssayExchangeFeature = () => {
             placeholder="Sebutkan 2-3 skill atau pengalaman terkuatmu."
             value={formData.skillPengalaman}
             onChange={(e) =>
-              setFormData({ ...formData, skillPengalaman: e.target.value })
+              setState({
+                ...state,
+                formData: { ...formData, skillPengalaman: e.target.value },
+              })
             }
             rows={4}
           />
@@ -250,7 +362,10 @@ export const EssayExchangeFeature = () => {
             placeholder="Apa rencanamu setelah kembali ke Indonesia?"
             value={formData.rencanaPasca}
             onChange={(e) =>
-              setFormData({ ...formData, rencanaPasca: e.target.value })
+              setState({
+                ...state,
+                formData: { ...formData, rencanaPasca: e.target.value },
+              })
             }
             rows={4}
           />
