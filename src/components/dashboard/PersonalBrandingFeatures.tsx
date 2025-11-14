@@ -9,14 +9,14 @@ interface FeaturesProps {
 
 const features = [
   {
-    id: 'instagram-bio',
+    id: 'instagram-bio-analyzer',
     icon: Instagram,
     title: 'Instagram Bio Analyzer',
     description: 'Optimalkan bio IG kamu sesuai gaya dan keahlian.',
     isPremium: true,
   },
   {
-    id: 'linkedin-optimizer',
+    id: 'linkedin-profile-optimizer',
     icon: Linkedin,
     title: 'LinkedIn Profile Optimizer',
     description: 'Buat Headline & Summary LinkedIn profesional dengan AI.',

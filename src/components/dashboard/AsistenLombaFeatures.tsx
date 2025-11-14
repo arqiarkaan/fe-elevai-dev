@@ -9,21 +9,21 @@ interface FeaturesProps {
 
 const features = [
   {
-    id: 'essay-generator',
+    id: 'essay-idea-generator',
     icon: FileText,
     title: 'Essay Generator',
     description: 'Buat ide judul essay inovatif dan kreatif.',
     isPremium: false,
   },
   {
-    id: 'kti-generator',
+    id: 'kti-idea-generator',
     icon: Microscope,
     title: 'KTI Generator',
     description: 'Kembangkan ide Karya Tulis Ilmiah kompetitif.',
     isPremium: false,
   },
   {
-    id: 'business-plan',
+    id: 'business-plan-generator',
     icon: Briefcase,
     title: 'Business Plan Generator',
     description: 'Buat rencana bisnis baru yang impactful.',

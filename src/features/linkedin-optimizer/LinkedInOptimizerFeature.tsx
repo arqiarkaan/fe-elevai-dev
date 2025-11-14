@@ -100,7 +100,7 @@ export const LinkedInOptimizerFeature = () => {
     'linkedin-optimizer',
     validateStep
   );
-  const { refreshProfile } = useUserStore();
+  const { refreshProfile, profile } = useUserStore();
 
   const { step, formData, generatedResult } = state;
   const setFormData = (data: FormData) =>
@@ -218,11 +218,18 @@ export const LinkedInOptimizerFeature = () => {
         skills: formData.skills.filter((s) => s.trim() !== ''),
       });
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.success) {
+        // Save token balance BEFORE refresh
+        const previousBalance = profile?.tokens || 0;
+
         setGeneratedResult(data.data.result);
         setStep(5);
-        refreshProfile();
+        await refreshProfile();
+
+        // Get new balance after refresh and show token consumption toast
+        const newBalance = useUserStore.getState().profile?.tokens || 0;
+        showTokenConsumptionToast(previousBalance, newBalance);
       }
     },
     onError: (error: {

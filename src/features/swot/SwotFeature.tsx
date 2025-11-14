@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
 import { generatePDF } from '@/lib/pdf-generator';
 import { useStepFeatureState } from '@/hooks/useFeatureState';
+import { showTokenConsumptionToast } from '@/utils/token-toast';
 
 interface SwotState {
   step: number;
@@ -74,11 +75,19 @@ export const SwotFeature = () => {
         viaStrengths: [formData.via1, formData.via2, formData.via3],
       });
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.success) {
+        // Save token balance BEFORE refresh
+        const previousBalance = profile?.tokens || 0;
+
         setState({ ...state, result: data.data, step: 2 });
+
         // Refresh profile to update token balance
-        refreshProfile();
+        await refreshProfile();
+
+        // Get new balance after refresh and show token consumption toast
+        const newBalance = useUserStore.getState().profile?.tokens || 0;
+        showTokenConsumptionToast(previousBalance, newBalance);
       }
     },
     onError: (error: {
@@ -211,7 +220,7 @@ export const SwotFeature = () => {
         </p>
       </div>
 
-      <Card className="p-6 bg-card/50 border-border/50 space-y-4">
+      <Card className="p-6 gradient-card border-border/50 space-y-4">
         <h3 className="text-lg font-semibold">Masukkan Data Kepribadian</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

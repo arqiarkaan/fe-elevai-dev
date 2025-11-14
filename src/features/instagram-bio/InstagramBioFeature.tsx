@@ -27,6 +27,7 @@ import { useUserStore } from '@/lib/user-store';
 import { useState } from 'react';
 
 import { useStepFeatureState } from '@/hooks/useFeatureState';
+import { showTokenConsumptionToast } from '@/utils/token-toast';
 
 type Step = 1 | 2 | 3;
 
@@ -92,7 +93,7 @@ export const InstagramBioFeature = () => {
     'instagram-bio',
     validateStep
   );
-  const { refreshProfile } = useUserStore();
+  const { refreshProfile, profile } = useUserStore();
 
   // Use local state for File object (cannot be serialized to localStorage)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -168,11 +169,18 @@ export const InstagramBioFeature = () => {
           : {}),
       });
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.success) {
+        // Save token balance BEFORE refresh
+        const previousBalance = profile?.tokens || 0;
+
         setGeneratedBios(data.data.bios);
         setStep(3);
-        refreshProfile();
+        await refreshProfile();
+
+        // Get new balance after refresh and show token consumption toast
+        const newBalance = useUserStore.getState().profile?.tokens || 0;
+        showTokenConsumptionToast(previousBalance, newBalance);
       }
     },
     onError: (error: {

@@ -16,14 +16,14 @@ interface FeaturesProps {
 
 const features = [
   {
-    id: 'ikigai',
+    id: 'ikigai-self-discovery',
     icon: Target,
     title: 'Ikigai Self Discovery',
     description: 'Pemetaan Ikigai dan Strategi Karier Berbasis AI.',
     isPremium: true,
   },
   {
-    id: 'swot',
+    id: 'swot-self-analysis',
     icon: BarChart3,
     title: 'SWOT Self Analysis',
     description: 'Kenali kekuatan & tantangan dirimu lewat MBTI & VIA.',

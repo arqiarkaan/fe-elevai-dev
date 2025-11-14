@@ -9,7 +9,7 @@ interface FeaturesProps {
 
 const features = [
   {
-    id: 'veo-prompting',
+    id: 'generator-prompt-veo',
     icon: Video,
     title: 'VEO 3 Prompting',
     description:

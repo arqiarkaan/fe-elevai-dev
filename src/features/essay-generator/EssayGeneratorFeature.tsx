@@ -20,6 +20,7 @@ import {
   LoadingStateCard,
 } from '@/components/GeneratedResultCard';
 import { useFeatureState } from '@/hooks/useFeatureState';
+import { showTokenConsumptionToast } from '@/utils/token-toast';
 
 const subTemaMap = {
   soshum: [
@@ -75,7 +76,7 @@ export const EssayGeneratorFeature = () => {
     },
     'essay-generator'
   );
-  const { refreshProfile } = useUserStore();
+  const { refreshProfile, profile } = useUserStore();
 
   const {
     temaUtama,
@@ -127,7 +128,7 @@ export const EssayGeneratorFeature = () => {
       setLastFormData(requestData);
       return await asistenLombaApi.essayIdea(requestData);
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.success) {
         // Handle different response formats
         let resultText = '';
@@ -166,8 +167,15 @@ export const EssayGeneratorFeature = () => {
           return;
         }
 
+        // Save token balance BEFORE refresh
+        const previousBalance = profile?.tokens || 0;
+
         setResult(resultText);
-        refreshProfile();
+        await refreshProfile();
+
+        // Get new balance after refresh and show token consumption toast
+        const newBalance = useUserStore.getState().profile?.tokens || 0;
+        showTokenConsumptionToast(previousBalance, newBalance);
       }
     },
     onError: (error: {

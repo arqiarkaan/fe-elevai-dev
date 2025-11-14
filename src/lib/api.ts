@@ -62,6 +62,28 @@ export const paymentApi = {
 };
 
 /**
+ * Features API
+ */
+export const featuresApi = {
+  /**
+   * Get all available features with token costs
+   */
+  async getFeatures() {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/features`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch features');
+    }
+
+    return response.json();
+  },
+};
+
+/**
  * User API
  */
 export const userApi = {

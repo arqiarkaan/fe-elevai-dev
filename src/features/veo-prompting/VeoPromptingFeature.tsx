@@ -19,6 +19,7 @@ import {
   LoadingStateCard,
 } from '@/components/GeneratedResultCard';
 import { useFeatureState } from '@/hooks/useFeatureState';
+import { showTokenConsumptionToast } from '@/utils/token-toast';
 
 const waktuOptions = [
   'Pagi',
@@ -70,7 +71,7 @@ export const VeoPromptingFeature = () => {
     },
     'veo-prompting'
   );
-  const { refreshProfile } = useUserStore();
+  const { refreshProfile, profile } = useUserStore();
 
   const { formData, result } = state;
   const setFormData = (value: VeoFormData) =>
@@ -97,7 +98,7 @@ export const VeoPromptingFeature = () => {
         detailTambahan: formData.detail,
       });
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.success) {
         // Handle different response formats
         let resultText = '';
@@ -121,8 +122,15 @@ export const VeoPromptingFeature = () => {
           return;
         }
 
+        // Save token balance BEFORE refresh
+        const previousBalance = profile?.tokens || 0;
+
         setResult(resultText);
-        refreshProfile();
+        await refreshProfile();
+
+        // Get new balance after refresh and show token consumption toast
+        const newBalance = useUserStore.getState().profile?.tokens || 0;
+        showTokenConsumptionToast(previousBalance, newBalance);
       }
     },
     onError: (error: {

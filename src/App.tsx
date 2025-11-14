@@ -74,26 +74,47 @@ const AppContent = () => {
             }
           >
             {/* Student Development */}
-            <Route path="ikigai" element={<IkigaiFeature />} />
-            <Route path="swot" element={<SwotFeature />} />
+            <Route path="ikigai-self-discovery" element={<IkigaiFeature />} />
+            <Route path="swot-self-analysis" element={<SwotFeature />} />
             <Route path="interview-simulation" element={<InterviewFeature />} />
 
             {/* Asisten Lomba */}
             <Route path="essay-exchanges" element={<EssayExchangeFeature />} />
-            <Route path="essay-generator" element={<EssayGeneratorFeature />} />
-            <Route path="kti-generator" element={<KtiGeneratorFeature />} />
-            <Route path="business-plan" element={<BusinessPlanFeature />} />
+            <Route
+              path="essay-idea-generator"
+              element={<EssayGeneratorFeature />}
+            />
+            <Route
+              path="kti-idea-generator"
+              element={<KtiGeneratorFeature />}
+            />
+            <Route
+              path="business-plan-generator"
+              element={<BusinessPlanFeature />}
+            />
 
             {/* Personal Branding */}
-            <Route path="instagram-bio" element={<InstagramBioFeature />} />
             <Route
-              path="linkedin-optimizer"
+              path="instagram-bio-analyzer"
+              element={<InstagramBioFeature />}
+            />
+            <Route
+              path="linkedin-profile-optimizer"
               element={<LinkedInOptimizerFeature />}
             />
 
             {/* Daily Tools */}
-            <Route path="veo-prompting" element={<VeoPromptingFeature />} />
+            <Route
+              path="generator-prompt-veo"
+              element={<VeoPromptingFeature />}
+            />
+
+            {/* Prompt Enhancer with nested sub-routes */}
             <Route path="prompt-enhancer" element={<PromptEnhancerFeature />} />
+            <Route
+              path="prompt-enhancer/:subFeature"
+              element={<PromptEnhancerFeature />}
+            />
           </Route>
 
           {/* Catch-all route */}

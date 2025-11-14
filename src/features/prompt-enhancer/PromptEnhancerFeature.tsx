@@ -19,10 +19,12 @@ import {
   LoadingStateCard,
 } from '@/components/GeneratedResultCard';
 import { useFeatureState } from '@/hooks/useFeatureState';
+import { showTokenConsumptionToast } from '@/utils/token-toast';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const kebutuhanOptions = [
   {
-    id: 'belajar',
+    id: 'topik-baru',
     icon: BookOpen,
     header: 'Mempelajari Topik Baru',
     subheader: 'Dapatkan penjelasan mendalam & terstruktur.',
@@ -58,7 +60,7 @@ const kebutuhanOptions = [
     apiCall: (prompt: string) => dailyToolsApi.promptEnhancerRencana(prompt),
   },
   {
-    id: 'brainstorm',
+    id: 'brainstorming',
     icon: Lightbulb,
     header: 'Brainstorming Ide',
     subheader: 'Gali berbagai kemungkinan & sudut pandang baru.',
@@ -79,26 +81,29 @@ const kebutuhanOptions = [
 ];
 
 export const PromptEnhancerFeature = () => {
+  const navigate = useNavigate();
+  const { subFeature } = useParams<{ subFeature?: string }>();
+
+  // Get selected ID from URL param (e.g., "/prompt-enhancer/koding" -> "koding")
+  const selectedId = subFeature || '';
+
   const [state, setState] = useFeatureState(
     {
-      selectedKebutuhan: null as string | null,
       prompt: '',
       result: null as string | null,
     },
-    'prompt-enhancer'
+    selectedId ? `prompt-enhancer-${selectedId}` : 'prompt-enhancer' // Use unique storage per sub-route
   );
-  const { refreshProfile } = useUserStore();
+  const { refreshProfile, profile } = useUserStore();
 
-  const selected = kebutuhanOptions.find(
-    (opt) => opt.id === state.selectedKebutuhan
-  );
+  const selected = kebutuhanOptions.find((opt) => opt.id === selectedId);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
       if (!selected) throw new Error('No option selected');
       return await selected.apiCall(state.prompt);
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.success) {
         // Handle different response formats
         let resultText = '';
@@ -120,8 +125,15 @@ export const PromptEnhancerFeature = () => {
           return;
         }
 
+        // Save token balance BEFORE refresh
+        const previousBalance = profile?.tokens || 0;
+
         setState((prev) => ({ ...prev, result: resultText }));
-        refreshProfile();
+        await refreshProfile();
+
+        // Get new balance after refresh and show token consumption toast
+        const newBalance = useUserStore.getState().profile?.tokens || 0;
+        showTokenConsumptionToast(previousBalance, newBalance);
       }
     },
     onError: (error: {
@@ -152,11 +164,19 @@ export const PromptEnhancerFeature = () => {
   };
 
   const handleReset = () => {
-    setState({ selectedKebutuhan: null, prompt: '', result: null });
+    const storageKey = selectedId
+      ? `prompt-enhancer-${selectedId}`
+      : 'prompt-enhancer';
+    sessionStorage.removeItem(`feature_state_${storageKey}`);
+    setState({ prompt: '', result: null });
   };
 
   const handleBackToSelection = () => {
-    setState({ selectedKebutuhan: null, prompt: '', result: null });
+    const storageKey = selectedId
+      ? `prompt-enhancer-${selectedId}`
+      : 'prompt-enhancer';
+    sessionStorage.removeItem(`feature_state_${storageKey}`);
+    navigate('/dashboard/features/prompt-enhancer');
   };
 
   if (selected) {
@@ -236,7 +256,7 @@ export const PromptEnhancerFeature = () => {
               key={option.id}
               className="p-6 cursor-pointer hover:border-primary/50 hover:shadow-glow transition-smooth group"
               onClick={() =>
-                setState((prev) => ({ ...prev, selectedKebutuhan: option.id }))
+                navigate(`/dashboard/features/prompt-enhancer/${option.id}`)
               }
             >
               <Icon className="w-10 h-10 text-primary mb-4 group-hover:scale-110 transition-smooth" />

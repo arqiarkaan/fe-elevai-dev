@@ -23,6 +23,7 @@ import { useAuthStore } from '@/lib/auth';
 import { useUserStore, subscribeToProfileChanges } from '@/lib/user-store';
 import { PremiumModal } from '@/components/payment/PremiumModal';
 import { TokenModal } from '@/components/payment/TokenModal';
+import { TokenIndicator } from '@/components/TokenIndicator';
 import { toast } from 'sonner';
 
 export const FeatureLayout = () => {
@@ -62,6 +63,50 @@ export const FeatureLayout = () => {
     return user?.email?.split('@')[0] || 'User';
   };
   const username = getFirstName();
+
+  // Helper function to extract feature ID from pathname
+  const getFeatureIdFromPath = () => {
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    // pathParts example: ['dashboard', 'features', 'prompt-enhancer', 'topik-baru']
+
+    const featureIndex = pathParts.indexOf('features');
+    if (featureIndex === -1 || featureIndex >= pathParts.length - 1) {
+      return '';
+    }
+
+    const mainFeature = pathParts[featureIndex + 1]; // e.g., 'prompt-enhancer'
+    const subFeature = pathParts[featureIndex + 2]; // e.g., 'topik-baru' or undefined
+
+    // For prompt-enhancer sub-features, combine them
+    if (mainFeature === 'prompt-enhancer' && subFeature) {
+      return `prompt-enhancer-${subFeature}`;
+    }
+
+    // For other features, return the main feature
+    return mainFeature || '';
+  };
+
+  // Check if we should show the TokenIndicator
+  // Hide it when on prompt-enhancer main page (without sub-feature)
+  const shouldShowTokenIndicator = () => {
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const featureIndex = pathParts.indexOf('features');
+
+    if (featureIndex === -1 || featureIndex >= pathParts.length - 1) {
+      return false;
+    }
+
+    const mainFeature = pathParts[featureIndex + 1];
+    const subFeature = pathParts[featureIndex + 2];
+
+    // Hide token indicator on prompt-enhancer main page (without sub-feature)
+    if (mainFeature === 'prompt-enhancer' && !subFeature) {
+      return false;
+    }
+
+    // Show for all other cases (including prompt-enhancer sub-features)
+    return true;
+  };
 
   const handleBack = () => {
     // Clear session storage for current feature
@@ -232,14 +277,19 @@ export const FeatureLayout = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <Button
-          variant="outline"
-          onClick={handleBack}
-          className="mb-6 hover:border-primary/50 transition-smooth"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Kembali ke Dashboard
-        </Button>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            className="hover:border-primary/50 transition-smooth"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Kembali ke Dashboard
+          </Button>
+          {shouldShowTokenIndicator() && (
+            <TokenIndicator featureId={getFeatureIdFromPath()} />
+          )}
+        </div>
         <Card className="p-6 md:p-8 gradient-card border-border/50">
           <Outlet />
         </Card>

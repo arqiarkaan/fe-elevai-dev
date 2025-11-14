@@ -20,6 +20,8 @@ import { studentDevelopmentApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
 import { generatePDF } from '@/lib/pdf-generator';
+import { useStepFeatureState } from '@/hooks/useFeatureState';
+import { showTokenConsumptionToast } from '@/utils/token-toast';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -44,8 +46,6 @@ interface Stage1Response {
   ikigai_spots: Array<{ title: string; description: string }>;
   life_purposes: Array<{ statement: string }>;
 }
-
-import { useStepFeatureState } from '@/hooks/useFeatureState';
 
 interface IkigaiState {
   step: Step;
@@ -117,7 +117,7 @@ export const IkigaiFeature = () => {
     'ikigai',
     validateStep
   );
-  const { refreshProfile } = useUserStore();
+  const { refreshProfile, profile } = useUserStore();
 
   const { step, formData, stage1Data, finalResult } = state;
   const setFormData = (data: FormData) =>
@@ -233,11 +233,18 @@ export const IkigaiFeature = () => {
         selectedSliceOfLife: formData.sliceOfLife,
       });
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.success) {
+        // Save token balance BEFORE refresh
+        const previousBalance = profile?.tokens || 0;
+
         setFinalResult(data.data);
         setStep(5);
-        refreshProfile();
+        await refreshProfile();
+
+        // Get new balance after refresh and show token consumption toast
+        const newBalance = useUserStore.getState().profile?.tokens || 0;
+        showTokenConsumptionToast(previousBalance, newBalance);
       }
     },
     onError: (error: unknown) => {
