@@ -36,7 +36,6 @@ import SpeechRecognition, {
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { generatePDF } from '@/lib/pdf-generator';
 import { useStepFeatureState } from '@/hooks/useFeatureState';
-import { showTokenConsumptionToast } from '@/utils/token-toast';
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -333,19 +332,12 @@ export const InterviewFeature = () => {
           // Interview completed
           const evaluationData = data.data as InterviewEvaluation;
 
-          // Save token balance BEFORE refresh
-          const previousBalance = profile?.tokens || 0;
-
           setState({
             ...state,
             evaluation: evaluationData,
             step: 4,
           });
           await refreshProfile();
-
-          // Get new balance after refresh and show token consumption toast
-          const newBalance = useUserStore.getState().profile?.tokens || 0;
-          showTokenConsumptionToast(previousBalance, newBalance);
         } else {
           // Next question - preserve session_id from previous state
           const nextQuestion = data.data as InterviewSession;

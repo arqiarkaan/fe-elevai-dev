@@ -13,7 +13,6 @@ import {
   LoadingStateCard,
 } from '@/components/GeneratedResultCard';
 import { useFeatureState } from '@/hooks/useFeatureState';
-import { showTokenConsumptionToast } from '@/utils/token-toast';
 
 const switchOptions = [
   { key: 'ringkasanEksekutif', label: 'Ringkasan Eksekutif' },
@@ -83,15 +82,8 @@ export const BusinessPlanFeature = () => {
           return;
         }
 
-        // Save token balance BEFORE refresh
-        const previousBalance = profile?.tokens || 0;
-
         setResult(resultText);
         await refreshProfile();
-
-        // Get new balance after refresh and show token consumption toast
-        const newBalance = useUserStore.getState().profile?.tokens || 0;
-        showTokenConsumptionToast(previousBalance, newBalance);
       }
     },
     onError: (error: {

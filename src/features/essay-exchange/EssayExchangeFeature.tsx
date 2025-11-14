@@ -23,7 +23,6 @@ import { toast } from 'sonner';
 import { useUserStore } from '@/lib/user-store';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { generatePDF } from '@/lib/pdf-generator';
-import { showTokenConsumptionToast } from '@/utils/token-toast';
 
 type Step = 1 | 2;
 
@@ -92,15 +91,8 @@ export const EssayExchangeFeature = () => {
     },
     onSuccess: async (data) => {
       if (data.success) {
-        // Save token balance BEFORE refresh
-        const previousBalance = profile?.tokens || 0;
-
         setState({ ...state, result: data.data.essay, step: 2 });
         await refreshProfile();
-
-        // Get new balance after refresh and show token consumption toast
-        const newBalance = useUserStore.getState().profile?.tokens || 0;
-        showTokenConsumptionToast(previousBalance, newBalance);
       }
     },
     onError: (error: {
