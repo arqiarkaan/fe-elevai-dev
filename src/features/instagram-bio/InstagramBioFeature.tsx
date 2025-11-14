@@ -264,23 +264,28 @@ export const InstagramBioFeature = () => {
   };
 
   const handleAnalyzeAnother = () => {
-    setStep(1);
-    setUploadedImage(null);
+    // Reset local state
     setUploadedFile(null);
-    setBioContent('');
-    setAnalisisAwal('');
-    setGeneratedBios([]);
-    setFormData({
-      tujuanUtama: '',
-      tujuanLainnya: '',
-      gayaTulisan: '',
-      gayaLainnya: '',
-      siapa: '',
-      targetAudiens: '',
-      pencapaian: [''],
-      cta: '',
-      punyaHashtag: '',
-      hashtag: '',
+
+    // Reset all persisted state in one call
+    setState({
+      step: 1,
+      uploadedImage: null,
+      bioContent: '',
+      analisisAwal: '',
+      generatedBios: [],
+      formData: {
+        tujuanUtama: '',
+        tujuanLainnya: '',
+        gayaTulisan: '',
+        gayaLainnya: '',
+        siapa: '',
+        targetAudiens: '',
+        pencapaian: [''],
+        cta: '',
+        punyaHashtag: '',
+        hashtag: '',
+      },
     });
   };
 
@@ -660,21 +665,25 @@ export const InstagramBioFeature = () => {
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {generatedBios.map((bio, index) => (
             <Card
               key={index}
-              className="p-6 gradient-card border-border/50 relative group"
+              className="p-4 sm:p-5 gradient-card border-border/50 relative group flex flex-col"
             >
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handleCopyBio(bio)}
-                className="absolute top-4 right-4"
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-              <p className="text-lg font-medium pr-12">{bio}</p>
+              <div className="flex items-start justify-between gap-3 flex-1">
+                <p className="text-sm sm:text-lg font-medium whitespace-pre-line leading-tight flex-1 break-words">
+                  {bio}
+                </p>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleCopyBio(bio)}
+                  className="flex-shrink-0"
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
             </Card>
           ))}
         </div>
