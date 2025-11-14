@@ -172,7 +172,7 @@ export const SwotFeature = () => {
             <CheckCircle2 className="w-5 h-5" />
             Data Analisis
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className="space-y-3 text-sm">
             <p>
               <strong>MBTI:</strong> {formData.mbti}
             </p>

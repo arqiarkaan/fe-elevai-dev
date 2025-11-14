@@ -71,6 +71,9 @@ export function useStepFeatureState<T extends { step?: number }>(
   const location = useLocation();
   const storageKey = `feature_state_${featureName}`;
 
+  // Track the current feature path to detect navigation away
+  const [lastFeaturePath] = useState(() => location.pathname);
+
   // Load from sessionStorage on mount, sync with URL if exists
   const [state, setState] = useState<T>(() => {
     try {
@@ -146,18 +149,42 @@ export function useStepFeatureState<T extends { step?: number }>(
     });
   };
 
-  // Clear storage only when navigating away from feature
+  // Clear storage when navigating away from feature OR when returning to dashboard
+  useEffect(() => {
+    // Check if we're navigating away from the feature
+    const isLeavingFeature =
+      !location.pathname.includes(`/dashboard/features/${featureName}`) ||
+      location.pathname === '/dashboard';
+
+    // If we're leaving the feature, clear storage immediately
+    if (isLeavingFeature && location.pathname !== lastFeaturePath) {
+      try {
+        sessionStorage.removeItem(storageKey);
+        console.log(`Cleared feature state for: ${featureName}`);
+      } catch (error) {
+        console.error('Error clearing feature state:', error);
+      }
+    }
+  }, [location.pathname, featureName, storageKey, lastFeaturePath]);
+
+  // Also clear on unmount if not on the feature page
   useEffect(() => {
     return () => {
-      if (!location.pathname.includes(`/dashboard/features/${featureName}`)) {
+      // Clear if navigating to dashboard or away from feature
+      const currentPath = window.location.pathname;
+      if (
+        !currentPath.includes(`/dashboard/features/${featureName}`) ||
+        currentPath === '/dashboard'
+      ) {
         try {
           sessionStorage.removeItem(storageKey);
+          console.log(`Cleared feature state on unmount for: ${featureName}`);
         } catch (error) {
           console.error('Error clearing feature state:', error);
         }
       }
     };
-  }, [location, featureName, storageKey]);
+  }, [featureName, storageKey]);
 
   return [state, setState, setStep];
 }

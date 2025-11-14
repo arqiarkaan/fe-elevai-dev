@@ -97,6 +97,7 @@ export const InstagramBioFeature = () => {
 
   // Use local state for File object (cannot be serialized to localStorage)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const {
     step,
@@ -213,7 +214,40 @@ export const InstagramBioFeature = () => {
       };
       reader.readAsDataURL(file);
     } else {
-      toast.error('Harap pilih file gambar yang valid');
+      toast.error('Harap pilih file gambar yang valid (JPG, PNG, GIF, dll)');
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      // Set the file first
+      setUploadedFile(file);
+
+      // Then read and display the image
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUploadedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast.error('Harap drop file gambar yang valid (JPG, PNG, GIF, dll)');
     }
   };
 
@@ -272,6 +306,9 @@ export const InstagramBioFeature = () => {
   };
 
   const handleAnalyzeAnother = () => {
+    // Clear session storage first
+    sessionStorage.removeItem('feature_state_instagram-bio');
+
     // Reset local state
     setUploadedFile(null);
 
@@ -332,9 +369,11 @@ export const InstagramBioFeature = () => {
         {renderStepIndicator()}
 
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-2">
-            <Instagram className="w-8 h-8 text-primary" />
-            AI Instagram Bio Analyzer
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3">
+            <span className="flex flex-col sm:flex-row items-center justify-center gap-2">
+              <Instagram className="w-8 h-8 text-primary" />
+              <span>AI Instagram Bio Analyzer</span>
+            </span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Paste atau upload screenshot bio IG Anda, biarkan AI memberi masukan
@@ -344,7 +383,19 @@ export const InstagramBioFeature = () => {
 
         <Card className="p-12 gradient-card border-border/50">
           <div className="space-y-6">
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-border/50 rounded-lg p-12 hover:border-primary/50 transition-all">
+            <div
+              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-12 transition-all cursor-pointer ${
+                isDragging
+                  ? 'border-primary bg-primary/10 scale-105'
+                  : uploadedImage
+                  ? 'border-green-500 bg-green-500/5'
+                  : 'border-border/50 hover:border-primary/50'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('image-upload')?.click()}
+            >
               <input
                 type="file"
                 id="image-upload"
@@ -352,25 +403,30 @@ export const InstagramBioFeature = () => {
                 onChange={handleImageUpload}
                 className="hidden"
               />
-              <label
-                htmlFor="image-upload"
-                className="cursor-pointer flex flex-col items-center gap-4"
-              >
-                {uploadedImage ? (
+              {uploadedImage ? (
+                <div className="flex flex-col items-center gap-4">
                   <img
                     src={uploadedImage}
                     alt="Uploaded bio"
                     className="max-w-md max-h-96 rounded-lg shadow-lg"
                   />
-                ) : (
-                  <>
-                    <Upload className="w-16 h-16 text-primary" />
-                    <span className="text-lg font-medium">
-                      Klik untuk memilih gambar
-                    </span>
-                  </>
-                )}
-              </label>
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                    Gambar berhasil diupload - Klik untuk ganti
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-16 h-16 text-primary mb-4" />
+                  <span className="text-lg font-medium mb-2">
+                    {isDragging
+                      ? 'Drop gambar di sini'
+                      : 'Drag & Drop atau Klik untuk upload'}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    Format: JPG, PNG, GIF, atau format gambar lainnya
+                  </span>
+                </>
+              )}
             </div>
 
             <Button

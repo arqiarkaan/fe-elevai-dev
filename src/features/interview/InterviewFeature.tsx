@@ -116,6 +116,7 @@ export const InterviewFeature = () => {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [speechError, setSpeechError] = useState<string>('');
+  const [isDraggingCV, setIsDraggingCV] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { refreshProfile, profile } = useUserStore();
 
@@ -414,6 +415,38 @@ export const InterviewFeature = () => {
         uploadCVMutation.mutate(file);
       } else {
         toast.error('Harap upload file PDF');
+      }
+    }
+  };
+
+  const handleDragOverCV = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!uploadCVMutation.isPending) {
+      setIsDraggingCV(true);
+    }
+  };
+
+  const handleDragLeaveCV = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCV(false);
+  };
+
+  const handleDropCV = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCV(false);
+
+    if (uploadCVMutation.isPending) return;
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      if (file.type === 'application/pdf') {
+        setState({ ...state, formData: { ...formData, cvFile: file } });
+        uploadCVMutation.mutate(file);
+      } else {
+        toast.error('Harap drop file PDF');
       }
     }
   };
@@ -853,7 +886,9 @@ export const InterviewFeature = () => {
               <div
                 className={`border-2 border-dashed rounded-md p-6 text-center transition-smooth cursor-pointer ${
                   uploadCVMutation.isPending
-                    ? 'border-primary bg-primary/5'
+                    ? 'border-primary bg-primary/5 cursor-wait'
+                    : isDraggingCV
+                    ? 'border-primary bg-primary/10 scale-105'
                     : formData.cvFile
                     ? 'border-green-500 bg-green-500/5'
                     : 'border-border hover:border-primary/50'
@@ -862,6 +897,9 @@ export const InterviewFeature = () => {
                   !uploadCVMutation.isPending &&
                   document.getElementById('cv-upload')?.click()
                 }
+                onDragOver={handleDragOverCV}
+                onDragLeave={handleDragLeaveCV}
+                onDrop={handleDropCV}
               >
                 {uploadCVMutation.isPending ? (
                   <>
@@ -877,21 +915,26 @@ export const InterviewFeature = () => {
                       {formData.cvFile.name}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      CV berhasil diupload dan diekstrak
+                      CV berhasil diupload dan diekstrak - Klik untuk ganti
                     </p>
                   </>
                 ) : (
                   <>
                     <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      Pilih File PDF...
+                    <p className="text-sm font-medium mb-1">
+                      {isDraggingCV
+                        ? 'Drop file PDF di sini'
+                        : 'Drag & Drop atau Klik untuk upload'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Format: PDF saja
                     </p>
                   </>
                 )}
                 <input
                   id="cv-upload"
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,application/pdf"
                   className="hidden"
                   onChange={handleCVUpload}
                   disabled={uploadCVMutation.isPending}

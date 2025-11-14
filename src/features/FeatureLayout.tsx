@@ -109,14 +109,24 @@ export const FeatureLayout = () => {
   };
 
   const handleBack = () => {
-    // Clear session storage for current feature
-    const featureName = location.pathname.split('/').pop();
-    if (featureName) {
-      try {
-        sessionStorage.removeItem(`feature_state_${featureName}`);
-      } catch (error) {
-        console.error('Error clearing feature state:', error);
+    // Clear ALL feature-related session storage when going back to dashboard
+    try {
+      // Get all keys from sessionStorage
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('feature_state_')) {
+          keysToRemove.push(key);
+        }
       }
+
+      // Remove all feature state keys
+      keysToRemove.forEach((key) => {
+        sessionStorage.removeItem(key);
+        console.log(`Cleared session storage: ${key}`);
+      });
+    } catch (error) {
+      console.error('Error clearing feature state:', error);
     }
 
     navigate('/dashboard');

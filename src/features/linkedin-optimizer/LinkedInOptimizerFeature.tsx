@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { useStepFeatureState } from '@/hooks/useFeatureState';
+import { showTokenConsumptionToast } from '@/utils/token-toast';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -260,36 +261,42 @@ export const LinkedInOptimizerFeature = () => {
   };
 
   const renderStepIndicator = () => (
-    <div className="flex justify-center items-start gap-3 mb-8 overflow-x-auto pb-2 px-4 pt-4">
-      {[
-        { num: 1, label: 'Tipe Output' },
-        { num: 2, label: 'Data Diri' },
-        { num: 3, label: 'Fokus Profil' },
-        { num: 4, label: 'Detail Pendukung' },
-        { num: 5, label: 'Hasil Optimasi' },
-      ].map((item) => (
-        <div
-          key={item.num}
-          className="flex flex-col items-center gap-2 w-[100px] flex-shrink-0"
-        >
+    <div className="mb-8 overflow-x-auto">
+      <div className="flex justify-start sm:justify-center items-start gap-2 sm:gap-3 min-w-max px-4 pb-2 pt-4">
+        {[
+          { num: 1, label: 'Tipe Output' },
+          { num: 2, label: 'Data Diri' },
+          { num: 3, label: 'Fokus Profil' },
+          { num: 4, label: 'Detail Pendukung' },
+          { num: 5, label: 'Hasil Optimasi' },
+        ].map((item) => (
           <div
-            className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-all ${
-              step >= item.num
-                ? 'bg-primary text-primary-foreground shadow-glow'
-                : 'bg-muted text-muted-foreground'
-            }`}
+            key={item.num}
+            className="flex flex-col items-center gap-1.5 sm:gap-2 w-[70px] sm:w-[100px] flex-shrink-0"
           >
-            {step > item.num ? <CheckCircle2 className="w-6 h-6" /> : item.num}
+            <div
+              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-base sm:text-lg transition-all ${
+                step >= item.num
+                  ? 'bg-primary text-primary-foreground shadow-glow'
+                  : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              {step > item.num ? (
+                <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
+              ) : (
+                item.num
+              )}
+            </div>
+            <span
+              className={`text-[10px] sm:text-xs font-medium text-center leading-tight ${
+                step >= item.num ? 'text-primary' : 'text-muted-foreground'
+              }`}
+            >
+              {item.label}
+            </span>
           </div>
-          <span
-            className={`text-xs font-medium text-center leading-tight ${
-              step >= item.num ? 'text-primary' : 'text-muted-foreground'
-            }`}
-          >
-            {item.label}
-          </span>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 
@@ -436,9 +443,11 @@ Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan p
       {renderStepIndicator()}
 
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-2">
-          <Linkedin className="w-8 h-8 text-primary" />
-          LinkedIn Profile Optimizer
+        <h2 className="text-2xl sm:text-3xl font-bold mb-3">
+          <span className="flex flex-col sm:flex-row items-center justify-center gap-2">
+            <Linkedin className="w-8 h-8 text-primary" />
+            <span>LinkedIn Profile Optimizer</span>
+          </span>
         </h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
           Buat Headline & Summary LinkedIn yang menarik perhatian rekruter
