@@ -94,7 +94,7 @@ export const EssayExchangeFeature = () => {
     },
     onSuccess: async (data) => {
       if (data.success) {
-        setState({ ...state, result: data.data.essay, step: 2 });
+        setState({ ...state, result: data.data, step: 2 });
         await refreshProfile();
       }
     },
