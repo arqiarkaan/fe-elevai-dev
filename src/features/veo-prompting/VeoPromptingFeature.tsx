@@ -80,7 +80,19 @@ export const VeoPromptingFeature = () => {
   const setResult = (value: string | null) =>
     setState({ ...state, result: value });
 
-  const isValid = formData.subjek && formData.aksi && formData.lokasi;
+  const isValid =
+    formData.subjek &&
+    formData.aksi &&
+    formData.ekspresi &&
+    formData.lokasi &&
+    formData.waktu &&
+    formData.pencahayaan &&
+    formData.gerakanKamera &&
+    formData.gaya &&
+    formData.suasana &&
+    formData.suara &&
+    formData.dialog &&
+    formData.detail;
 
   const generateMutation = useMutation({
     mutationFn: async () => {
