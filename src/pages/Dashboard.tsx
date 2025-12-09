@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -58,17 +58,32 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { signOut } = useAuthStore();
   const { username, isPremium, tokens } = useUserInfo();
-  const [activeCategory, setActiveCategory] = useState<Category>('student');
+
+  const [activeCategory, setActiveCategory] = useState<Category>(() => {
+    const saved = sessionStorage.getItem('dashboard_active_category');
+    if (saved && ['student', 'lomba', 'branding', 'tools'].includes(saved)) {
+      return saved as Category;
+    }
+    return 'student';
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
+  useEffect(() => {
+    sessionStorage.setItem('dashboard_active_category', activeCategory);
+  }, [activeCategory]);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
+      sessionStorage.removeItem('dashboard_active_category');
+
       await signOut();
       toast.success('Berhasil logout');
+
       navigate('/');
     } catch (error) {
       toast.error('Gagal logout');

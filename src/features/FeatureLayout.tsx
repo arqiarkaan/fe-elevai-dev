@@ -101,6 +101,9 @@ export const FeatureLayout = () => {
 
   const handleLogout = async () => {
     try {
+      // Clear dashboard state
+      sessionStorage.removeItem('dashboard_active_category');
+
       await signOut();
       toast.success('Berhasil logout');
       navigate('/');
