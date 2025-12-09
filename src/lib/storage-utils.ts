@@ -20,7 +20,6 @@ export function clearAllFeatureStates(): void {
 
     keysToRemove.forEach((key) => {
       sessionStorage.removeItem(key);
-      console.log(`Cleared session storage: ${key}`);
     });
   } catch (error) {
     console.error('Error clearing feature states:', error);
@@ -34,7 +33,6 @@ export function clearFeatureState(featureName: string): void {
   try {
     const storageKey = `${FEATURE_STATE_PREFIX}${featureName}`;
     sessionStorage.removeItem(storageKey);
-    console.log(`Cleared session storage: ${storageKey}`);
   } catch (error) {
     console.error(`Error clearing feature state for ${featureName}:`, error);
   }

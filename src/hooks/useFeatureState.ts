@@ -178,7 +178,6 @@ export function useStepFeatureState<T extends { step?: number }>(
       ) {
         try {
           sessionStorage.removeItem(storageKey);
-          console.log(`Cleared feature state on unmount for: ${featureName}`);
         } catch (error) {
           console.error('Error clearing feature state:', error);
         }
