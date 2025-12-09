@@ -3,7 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import {
   Tooltip,
   TooltipContent,
@@ -205,6 +211,10 @@ const Dashboard = () => {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[280px]">
+                  <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Menu navigasi untuk mengakses profil dan fitur lainnya
+                  </SheetDescription>
                   <div className="flex flex-col gap-4 mt-8">
                     <div className="flex flex-col gap-4 px-4 py-4 rounded-lg bg-card border border-border/50">
                       <div className="flex flex-col items-center gap-2 text-center">
