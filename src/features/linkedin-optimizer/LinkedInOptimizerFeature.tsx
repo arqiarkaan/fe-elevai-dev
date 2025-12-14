@@ -60,7 +60,7 @@ export const LinkedInOptimizerFeature = () => {
           state.formData.semester &&
           state.formData.targetKarir
         );
-      case 4:
+      case 4: {
         // Step 4 requires professional identity from step 3
         const words = state.formData.identitasProfesional
           .trim()
@@ -74,6 +74,7 @@ export const LinkedInOptimizerFeature = () => {
           words.length >= 4 &&
           words.length <= 7
         );
+      }
       case 5:
         // Step 5 requires generatedResult
         return !!state.generatedResult;
@@ -107,9 +108,9 @@ export const LinkedInOptimizerFeature = () => {
 
   const { step, formData, generatedResult } = state;
   const setFormData = (data: FormData) =>
-    setState({ ...state, formData: data });
+    setState((prev) => ({ ...prev, formData: data }));
   const setGeneratedResult = (data: string | null) =>
-    setState({ ...state, generatedResult: data });
+    setState((prev) => ({ ...prev, generatedResult: data }));
 
   const addItem = (field: 'pencapaian' | 'skills') => {
     if (formData[field].length < 3) {
@@ -223,8 +224,11 @@ export const LinkedInOptimizerFeature = () => {
     },
     onSuccess: async (data) => {
       if (data.success) {
-        setGeneratedResult(data.data.result);
-        setStep(5);
+        setState((prev) => ({
+          ...prev,
+          generatedResult: data.data.result,
+          step: 5,
+        }));
         await refreshProfile();
       }
     },
@@ -330,19 +334,9 @@ Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan p
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-2">
             <Linkedin className="w-8 h-8 text-primary" />
-            LinkedIn Profile Optimizer
+            Hasil Optimasi Profil Anda
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Buat Headline & Summary LinkedIn yang menarik perhatian rekruter
-            dengan AI.
-          </p>
-        </div>
-
-        <div className="text-center mb-6">
-          <h3 className="text-2xl font-bold mb-2">
-            Hasil Optimasi Profil Anda
-          </h3>
-          <p className="text-muted-foreground">
             {formData.targetOptimasi === 'headline' ? 'Headline' : 'Summary'}{' '}
             LinkedIn yang telah dioptimasi untuk Anda
           </p>
@@ -376,19 +370,6 @@ Saya selalu terbuka untuk peluang kolaborasi, mentoring, dan networking dengan p
         </Card>
 
         <div className="space-y-4 mt-6">
-          <Card className="p-4 bg-primary/5 border-primary/20">
-            <h4 className="font-bold mb-2 flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-primary" />
-              Tips Penggunaan
-            </h4>
-            <ul className="text-sm text-muted-foreground space-y-1 ml-7">
-              <li>• Sesuaikan tone dan gaya sesuai preferensi personal Anda</li>
-              <li>• Tambahkan link portfolio atau project jika ada</li>
-              <li>• Update secara berkala seiring perkembangan karir Anda</li>
-              <li>• Gunakan keyword yang relevan dengan industri target</li>
-            </ul>
-          </Card>
-
           <Button
             onClick={() => {
               // Clear session storage first

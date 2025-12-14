@@ -66,7 +66,11 @@ export function useStepFeatureState<T extends { step?: number }>(
   initialState: T,
   featureName: string,
   validateStep?: (step: number, state: T) => boolean
-): [T, React.Dispatch<React.SetStateAction<T>>, (step: number) => void] {
+): [
+  T,
+  React.Dispatch<React.SetStateAction<T>>,
+  (step: number | ((prev: number) => number)) => void
+] {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const storageKey = `feature_state_${featureName}`;
